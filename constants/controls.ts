@@ -1,4 +1,4 @@
-import { ConcreateType, ElementType } from '@/types/project';
+import { ElementType } from '@/types/project';
 
 export const ACCENT = '#0a7ea4';
 export const STORAGE_KEY = 'projects';
@@ -17,9 +17,5 @@ export const ELEMENT_TYPE_COLORS: Record<ElementType, string> = {
   [ElementType.BEAM]: '#2E7D32',
 };
 
-export const CONCREATE_TYPE_LABELS: Record<ConcreateType, string> = {
-  [ConcreateType.CONCRETE]: 'Concrete',
-  [ConcreateType.REINFORCED_CONCRETE]: 'Reinforced',
-  [ConcreateType.PRECAST_CONCRETE]: 'Precast',
-  [ConcreateType.MIXED_CONCRETE]: 'Mixed',
-};
+/** Fallback color for custom/other element types */
+export const DEFAULT_ELEMENT_TYPE_COLOR = '#6B7280';

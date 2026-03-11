@@ -5,6 +5,11 @@ export type Level = {
     description?: string;
   };
 
+export type ConcreteType = {
+  id: string;
+  name: string;
+};
+
 export type Program = {
     id: string;
     name: string;
@@ -16,12 +21,12 @@ export type Program = {
     latestVersion?:boolean;
   };
 
-export enum ConcreateType {
-    CONCRETE = 'concrete',
-    REINFORCED_CONCRETE = 'reinforced concrete',
-    PRECAST_CONCRETE = 'precast concrete',
-    MIXED_CONCRETE = 'mixed concrete',
-}
+export type ControlImage = {
+    uri: string;
+    description: string;
+  };
+
+
 
 export enum ElementType {
     COLUMN = 'column',
@@ -35,28 +40,26 @@ export type Control = {
     Level: Level;
     elementName: string;
     elementLocation:string;
-    elementType: ElementType;
+    elementType: ElementType | string;
     programs: Program[];
-    IronControlImagesUri?: string[];
-    IronControlDescription?: string;
-    ElectricalControlImagesUri?:string[];
-    ElectricalControlDescription?: string;
+    IronControlImages?: ControlImage[];
+    ElectricalControlImages?: ControlImage[];
     electricNeeded?:boolean;
-    InstallationControlImagesUri?:string[];
-    InstallationControlDescription?: string;
+    InstallationControlImages?: ControlImage[];
     installationNeeded?:boolean;
-    WaterControlImagesUri?:string[];
-    WaterControlDescription?: string;
+    WaterControlImages?: ControlImage[];
     waterNeeded?:boolean;
-    concreateType: ConcreateType;
-    ConcreteControlImagesUri?:string[];
-    ConcreteControlDescription?: string;
+    concreateType: ConcreteType;
+    ConcreteControlImages?: ControlImage[];
+    createdAt?: string;
+    updatedAt?: string;
   };
-  
+
   export type Project = {
     id: string;
     name: string;
     levels?: Level[];
+    concreteTypes?: ConcreteType[];
     programs?: Program[];
     controls?: Control[];
   };

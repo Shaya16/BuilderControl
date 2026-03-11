@@ -8,11 +8,14 @@ import { ElementType, Level } from '@/types/project';
 
 import { styles } from './styles';
 
+export const ELEMENT_TYPE_OTHER = 'other' as const;
+
 export type Step1Form = {
   levelId: string;
   elementName: string;
   elementLocation: string;
-  elementType: ElementType | '';
+  elementType: ElementType | typeof ELEMENT_TYPE_OTHER | '';
+  elementTypeOther?: string;
 };
 
 export const EMPTY_STEP1: Step1Form = {
@@ -20,6 +23,7 @@ export const EMPTY_STEP1: Step1Form = {
   elementName: '',
   elementLocation: '',
   elementType: '',
+  elementTypeOther: '',
 };
 
 type Props = {
@@ -86,7 +90,7 @@ export function StepElementDetails({ form, levels, onChange }: Props) {
               <TouchableOpacity
                 key={type}
                 style={[styles.chip, selected && { backgroundColor: color, borderColor: color }]}
-                onPress={() => onChange({ elementType: type })}
+                onPress={() => onChange({ elementType: type, elementTypeOther: '' })}
                 activeOpacity={0.7}>
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                   {ELEMENT_TYPE_LABELS[type]}
@@ -94,7 +98,36 @@ export function StepElementDetails({ form, levels, onChange }: Props) {
               </TouchableOpacity>
             );
           })}
+          <TouchableOpacity
+            key={ELEMENT_TYPE_OTHER}
+            style={[
+              styles.chip,
+              form.elementType === ELEMENT_TYPE_OTHER && {
+                backgroundColor: '#757575',
+                borderColor: '#757575',
+              },
+            ]}
+            onPress={() => onChange({ elementType: ELEMENT_TYPE_OTHER })}
+            activeOpacity={0.7}>
+            <Text
+              style={[
+                styles.chipText,
+                form.elementType === ELEMENT_TYPE_OTHER && styles.chipTextSelected,
+              ]}>
+              Other
+            </Text>
+          </TouchableOpacity>
         </View>
+        {form.elementType === ELEMENT_TYPE_OTHER && (
+          <TextInput
+            style={styles.input}
+            placeholder="Specify element type..."
+            placeholderTextColor="#999"
+            value={form.elementTypeOther ?? ''}
+            onChangeText={(v) => onChange({ elementTypeOther: v })}
+            returnKeyType="done"
+          />
+        )}
       </View>
     </View>
   );

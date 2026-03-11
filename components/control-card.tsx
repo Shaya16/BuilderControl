@@ -4,8 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
-  ACCENT,
-  CONCREATE_TYPE_LABELS,
+  DEFAULT_ELEMENT_TYPE_COLOR,
   ELEMENT_TYPE_COLORS,
   ELEMENT_TYPE_LABELS,
 } from '@/constants/controls';
@@ -19,7 +18,9 @@ type Props = {
 
 export function ControlCard({ control, onPress }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
-  const typeColor = ELEMENT_TYPE_COLORS[control.elementType];
+  const typeColor =
+    ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
+    DEFAULT_ELEMENT_TYPE_COLOR;
 
   return (
     <TouchableOpacity onPress={() => onPress(control)} activeOpacity={0.7}>
@@ -30,7 +31,7 @@ export function ControlCard({ control, onPress }: Props) {
             <ThemedText style={styles.elementName}>{control.elementName}</ThemedText>
             <View style={[styles.typeBadge, { borderColor: typeColor }]}>
               <Text style={[styles.typeBadgeText, { color: typeColor }]}>
-                {ELEMENT_TYPE_LABELS[control.elementType]}
+                {ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ?? control.elementType}
               </Text>
             </View>
           </ThemedView>
@@ -68,7 +69,7 @@ export function ControlCard({ control, onPress }: Props) {
 
           <View style={styles.concreteBadge}>
             <Text style={styles.concreteBadgeText}>
-              {CONCREATE_TYPE_LABELS[control.concreateType]}
+              {control.concreateType.name}
             </Text>
           </View>
         </ThemedView>

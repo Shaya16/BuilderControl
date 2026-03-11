@@ -12,8 +12,9 @@ import {
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
-  ConcreateType,
+  ConcreteType,
   Control,
+  ControlImage,
   ElementType,
   Level,
   Program,
@@ -21,7 +22,12 @@ import {
 
 import { StepConcreteType } from './step-concrete-type';
 import { StepElectricControl } from './step-electriccontrol';
-import { EMPTY_STEP1, Step1Form, StepElementDetails } from './step-element-details';
+import {
+  ELEMENT_TYPE_OTHER,
+  EMPTY_STEP1,
+  Step1Form,
+  StepElementDetails,
+} from './step-element-details';
 import { StepInstalationControl } from './step-instalationcontrol';
 import { StepIronControl } from './step-ironcontrol';
 import { StepPrograms } from './step-programs';
@@ -29,30 +35,26 @@ import { StepWaterControl } from './step-watercontrol';
 import { styles } from './styles';
 
 const TOTAL_STEPS = 7;
-const STEP_LABELS = ['Element Details', 'Programs','Iron Control', 'Electric Control', 'Installation Control', 'Water Control', 'Concrete Type', ];
+const STEP_LABELS = ['Element Details', 'Programs', 'Iron Control', 'Electric Control', 'Installation Control', 'Water Control', 'Concrete Type'];
 
 type Props = {
   visible: boolean;
   editingControl: Control | null;
   levels: Level[];
+  concreteTypes: ConcreteType[];
   latestPrograms: Program[];
   onSave: (data: {
     levelId: string;
     elementName: string;
     elementLocation: string;
-    elementType: ElementType;
+    elementType: ElementType | string;
     programIds: string[];
-    concreateType: ConcreateType;
-    ironControlImages: string[];
-    ironControlDescription: string;
-    electricControlImages: string[];
-    electricControlDescription: string;
-    installationControlImages: string[];
-    installationControlDescription: string;
-    waterControlImages: string[];
-    waterControlDescription: string;
-    concreteControlImages: string[];
-    concreteControlDescription: string;
+    concreteType: ConcreteType;
+    ironControlImages: ControlImage[];
+    electricControlImages: ControlImage[];
+    installationControlImages: ControlImage[];
+    waterControlImages: ControlImage[];
+    concreteControlImages: ControlImage[];
     electricNeeded: boolean;
     installationNeeded: boolean;
     waterNeeded: boolean;
@@ -65,6 +67,7 @@ export function ControlModal({
   visible,
   editingControl,
   levels,
+  concreteTypes,
   latestPrograms,
   onSave,
   onDelete,
@@ -73,58 +76,47 @@ export function ControlModal({
   const [step, setStep] = useState(1);
   const [step1, setStep1] = useState<Step1Form>(EMPTY_STEP1);
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
-  const [concreateType, setConcreateType] = useState<ConcreateType | ''>('');
-  const [ironControlImages, setIronControlImages] = useState<string[]>([]);
-  const [electricControlImages, setElectricControlImages] = useState<string[]>([]);
-  const [electricControlDescription, setElectricControlDescription] = useState('');
-  const [ironControlDescription, setIronControlDescription] = useState('');
-  const [installationControlImages, setInstallationControlImages] = useState<string[]>([]);
-  const [installationControlDescription, setInstallationControlDescription] = useState('');
-  const [waterControlImages, setWaterControlImages] = useState<string[]>([]);
-  const [waterControlDescription, setWaterControlDescription] = useState('');
-  const [concreteControlImages, setConcreteControlImages] = useState<string[]>([]);
-  const [concreteControlDescription, setConcreteControlDescription] = useState('');
+  const [concreteType, setConcreteType] = useState<ConcreteType | null>(null);
+  const [ironControlImages, setIronControlImages] = useState<ControlImage[]>([]);
+  const [electricControlImages, setElectricControlImages] = useState<ControlImage[]>([]);
+  const [installationControlImages, setInstallationControlImages] = useState<ControlImage[]>([]);
+  const [waterControlImages, setWaterControlImages] = useState<ControlImage[]>([]);
+  const [concreteControlImages, setConcreteControlImages] = useState<ControlImage[]>([]);
   const [electricNeeded, setElectricNeeded] = useState(true);
   const [installationNeeded, setInstallationNeeded] = useState(true);
   const [waterNeeded, setWaterNeeded] = useState(true);
 
   const resetAndOpen = () => {
     if (editingControl) {
+      const isOther =
+        typeof editingControl.elementType === 'string' &&
+        !Object.values(ElementType).includes(editingControl.elementType as ElementType);
       setStep1({
         levelId: editingControl.Level.id,
         elementName: editingControl.elementName,
         elementLocation: editingControl.elementLocation,
-        elementType: editingControl.elementType,
+        elementType: isOther ? ELEMENT_TYPE_OTHER : (editingControl.elementType as ElementType),
+        elementTypeOther: isOther ? editingControl.elementType : '',
       });
       setSelectedProgramIds(editingControl.programs.map((p) => p.id));
-      setConcreateType(editingControl.concreateType);
-      setIronControlImages(editingControl.IronControlImagesUri ?? []);
-      setIronControlDescription(editingControl.IronControlDescription ?? '');
-      setElectricControlImages(editingControl.ElectricalControlImagesUri ?? []);
-      setElectricControlDescription(editingControl.ElectricalControlDescription ?? '');
-      setInstallationControlImages(editingControl.InstallationControlImagesUri ?? []);
-      setInstallationControlDescription(editingControl.InstallationControlDescription ?? '');
-      setWaterControlImages(editingControl.WaterControlImagesUri ?? []);
-      setWaterControlDescription(editingControl.WaterControlDescription ?? '');
-      setConcreteControlImages(editingControl.ConcreteControlImagesUri ?? []);
-      setConcreteControlDescription(editingControl.ConcreteControlDescription ?? '');
+      setConcreteType(editingControl.concreateType);
+      setIronControlImages(editingControl.IronControlImages ?? []);
+      setElectricControlImages(editingControl.ElectricalControlImages ?? []);
+      setInstallationControlImages(editingControl.InstallationControlImages ?? []);
+      setWaterControlImages(editingControl.WaterControlImages ?? []);
+      setConcreteControlImages(editingControl.ConcreteControlImages ?? []);
       setElectricNeeded(editingControl.electricNeeded ?? true);
       setInstallationNeeded(editingControl.installationNeeded ?? true);
       setWaterNeeded(editingControl.waterNeeded ?? true);
     } else {
       setStep1(EMPTY_STEP1);
       setSelectedProgramIds([]);
-      setConcreateType('');
+      setConcreteType(null);
       setIronControlImages([]);
-      setIronControlDescription('');
       setElectricControlImages([]);
-      setElectricControlDescription('');
       setInstallationControlImages([]);
-      setInstallationControlDescription('');
       setWaterControlImages([]);
-      setWaterControlDescription('');
       setConcreteControlImages([]);
-      setConcreteControlDescription('');
       setElectricNeeded(true);
       setInstallationNeeded(true);
       setWaterNeeded(true);
@@ -136,17 +128,12 @@ export function ControlModal({
     setStep(1);
     setStep1(EMPTY_STEP1);
     setSelectedProgramIds([]);
-    setConcreateType('');
+    setConcreteType(null);
     setIronControlImages([]);
-    setIronControlDescription('');
     setElectricControlImages([]);
-    setElectricControlDescription('');
     setInstallationControlImages([]);
-    setInstallationControlDescription('');
     setWaterControlImages([]);
-    setWaterControlDescription('');
     setConcreteControlImages([]);
-    setConcreteControlDescription('');
     setElectricNeeded(true);
     setInstallationNeeded(true);
     setWaterNeeded(true);
@@ -163,24 +150,23 @@ export function ControlModal({
   };
 
   const handleConfirm = () => {
-    if (!step1.elementType || !concreateType || !step1.levelId) return;
+    if (!step1.elementType || !concreteType || !step1.levelId) return;
+    if (step1.elementType === ELEMENT_TYPE_OTHER && !step1.elementTypeOther?.trim()) return;
     onSave({
       levelId: step1.levelId,
       elementName: step1.elementName.trim(),
       elementLocation: step1.elementLocation.trim(),
-      elementType: step1.elementType as ElementType,
+      elementType:
+        step1.elementType === ELEMENT_TYPE_OTHER
+          ? (step1.elementTypeOther?.trim() ?? '')
+          : (step1.elementType as ElementType),
       programIds: selectedProgramIds,
-      concreateType: concreateType as ConcreateType,
+      concreteType,
       ironControlImages,
-      ironControlDescription,
       electricControlImages,
-      electricControlDescription,
       installationControlImages,
-      installationControlDescription,
       waterControlImages,
-      waterControlDescription,
       concreteControlImages,
-      concreteControlDescription,
       electricNeeded,
       installationNeeded,
       waterNeeded,
@@ -198,14 +184,24 @@ export function ControlModal({
     setStep1((prev) => ({ ...prev, ...update }));
   };
 
-  const isStep1Valid = !!(step1.levelId && step1.elementName.trim() && step1.elementType);
+  const isStep1Valid = !!(
+    step1.levelId &&
+    step1.elementName.trim() &&
+    step1.elementType &&
+    (step1.elementType !== ELEMENT_TYPE_OTHER || step1.elementTypeOther?.trim())
+  );
   const isLastStep = step === TOTAL_STEPS;
 
   const canProceed = (() => {
     if (step === 1) return isStep1Valid;
-    if (step === 7) return !!concreateType;
+    if (step === 7) return !!concreteType;
     return true;
   })();
+
+  const canSave =
+    isStep1Valid &&
+    !!concreteType &&
+    (step1.elementType !== ELEMENT_TYPE_OTHER || !!step1.elementTypeOther?.trim());
 
   const renderStep = () => {
     switch (step) {
@@ -222,47 +218,47 @@ export function ControlModal({
       case 3:
         return (
           <StepIronControl
-            imageUris={ironControlImages}
-            description={ironControlDescription}
+            images={ironControlImages}
             onChangeImages={setIronControlImages}
-            onChangeDescription={setIronControlDescription}
           />
         );
       case 4:
         return (
           <StepElectricControl
-            imageUris={electricControlImages}
-            description={electricControlDescription}
+            images={electricControlImages}
             needed={electricNeeded}
             onChangeImages={setElectricControlImages}
-            onChangeDescription={setElectricControlDescription}
             onChangeNeeded={setElectricNeeded}
           />
         );
       case 5:
         return (
           <StepInstalationControl
-            imageUris={installationControlImages}
-            description={installationControlDescription}
+            images={installationControlImages}
             needed={installationNeeded}
             onChangeImages={setInstallationControlImages}
-            onChangeDescription={setInstallationControlDescription}
             onChangeNeeded={setInstallationNeeded}
           />
         );
       case 6:
         return (
           <StepWaterControl
-            imageUris={waterControlImages}
-            description={waterControlDescription}
+            images={waterControlImages}
             needed={waterNeeded}
             onChangeImages={setWaterControlImages}
-            onChangeDescription={setWaterControlDescription}
             onChangeNeeded={setWaterNeeded}
           />
         );
       case 7:
-        return <StepConcreteType value={concreateType} onChange={setConcreateType} imageUris={concreteControlImages} description={concreteControlDescription} onChangeImages={setConcreteControlImages} onChangeDescription={setConcreteControlDescription} />;
+        return (
+          <StepConcreteType
+            concreteTypes={concreteTypes}
+            value={concreteType}
+            images={concreteControlImages}
+            onChange={setConcreteType}
+            onChangeImages={setConcreteControlImages}
+          />
+        );
       default:
         return null;
     }
@@ -270,7 +266,6 @@ export function ControlModal({
 
   return (
     <Modal
-      
       visible={visible}
       transparent
       animationType="slide"
@@ -284,16 +279,34 @@ export function ControlModal({
           <View style={styles.dragHandle} />
 
           <View style={styles.stepHeader}>
-            <Text style={styles.modalTitle}>
-              {editingControl
-                ? 'Edit Control'
-                : step > 1 && step1.elementName.trim()
-                  ? step1.elementName.trim()
-                  : 'New Control'}
-            </Text>
+            <View style={styles.stepHeaderRow}>
+              <Text style={styles.modalTitle}>
+                {editingControl
+                  ? 'Edit Control'
+                  : step > 1 && step1.elementName.trim()
+                    ? step1.elementName.trim()
+                    : 'New Control'}
+              </Text>
+              {editingControl && !isLastStep && (
+                <TouchableOpacity
+                  style={styles.jumpToLastButton}
+                  onPress={() => setStep(TOTAL_STEPS)}
+                  activeOpacity={0.8}>
+                  <Text style={styles.jumpToLastButtonText}>Last step</Text>
+                  <IconSymbol name="chevron.right" size={14} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.stepDots}>
               {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
-                <View key={s} style={[styles.dot, step >= s && styles.dotActive]} />
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.dot, step >= s && styles.dotActive]}
+                  onPress={editingControl ? () => setStep(s) : undefined}
+                  disabled={!editingControl}
+                  activeOpacity={editingControl ? 0.7 : 1}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                />
               ))}
             </View>
             <Text style={styles.stepLabel}>{STEP_LABELS[step - 1]}</Text>
@@ -311,20 +324,30 @@ export function ControlModal({
               <Text style={styles.backButtonText}>{step === 1 ? 'Cancel' : 'Back'}</Text>
             </TouchableOpacity>
 
-            {!isLastStep ? (
+            {!isLastStep && (
               <TouchableOpacity
-                style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
+                style={[
+                  styles.nextButton,
+                  editingControl && styles.nextButtonCompact,
+                  !canProceed && styles.nextButtonDisabled,
+                ]}
                 onPress={handleNext}
                 disabled={!canProceed}
                 activeOpacity={0.8}>
                 <Text style={styles.nextButtonText}>Next</Text>
                 <IconSymbol name="chevron.right" size={16} color="#fff" />
               </TouchableOpacity>
-            ) : (
+            )}
+
+            {(isLastStep || editingControl) && (
               <TouchableOpacity
-                style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
+                style={[
+                  styles.nextButton,
+                  editingControl && !isLastStep && styles.nextButtonCompact,
+                  !canSave && styles.nextButtonDisabled,
+                ]}
                 onPress={handleConfirm}
-                disabled={!canProceed}
+                disabled={!canSave}
                 activeOpacity={0.8}>
                 <Text style={styles.nextButtonText}>{editingControl ? 'Save' : 'Create'}</Text>
               </TouchableOpacity>

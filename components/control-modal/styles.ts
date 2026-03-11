@@ -34,7 +34,29 @@ export const styles = StyleSheet.create({
     borderBottomColor: '#eee',
     gap: 8,
   },
+  stepHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  jumpToLastButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: ACCENT,
+    flexShrink: 0,
+  },
+  jumpToLastButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
+  },
   modalTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: '#11181C',
@@ -192,6 +214,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+  },
+  nextButtonCompact: {
+    flex: 1,
   },
   nextButtonDisabled: {
     opacity: 0.4,

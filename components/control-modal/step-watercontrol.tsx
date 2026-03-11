@@ -4,24 +4,21 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT } from '@/constants/controls';
+import { ControlImage } from '@/types/project';
 
 import { styles } from './styles';
 
 type Props = {
-  imageUris: string[];
-  description: string;
+  images: ControlImage[];
   needed: boolean;
-  onChangeImages: (uris: string[]) => void;
-  onChangeDescription: (desc: string) => void;
+  onChangeImages: (images: ControlImage[]) => void;
   onChangeNeeded: (needed: boolean) => void;
 };
 
 export function StepWaterControl({
-  imageUris,
-  description,
+  images,
   needed,
   onChangeImages,
-  onChangeDescription,
   onChangeNeeded,
 }: Props) {
   const pickImage = () => {
@@ -29,25 +26,32 @@ export function StepWaterControl({
       {
         text: 'Camera',
         onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') return;
           const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ['images'],
             quality: 0.8,
           });
           if (!result.canceled) {
-            onChangeImages([...imageUris, result.assets[0].uri]);
+            onChangeImages([...images, { uri: result.assets[0].uri, description: '' }]);
           }
         },
       },
       {
         text: 'Gallery',
         onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') return;
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             quality: 0.8,
             allowsMultipleSelection: true,
           });
           if (!result.canceled) {
-            onChangeImages([...imageUris, ...result.assets.map((a) => a.uri)]);
+            onChangeImages([
+              ...images,
+              ...result.assets.map((a) => ({ uri: a.uri, description: '' })),
+            ]);
           }
         },
       },
@@ -55,8 +59,12 @@ export function StepWaterControl({
     ]);
   };
 
-  const removeImage = (uri: string) => {
-    onChangeImages(imageUris.filter((u) => u !== uri));
+  const removeImage = (index: number) => {
+    onChangeImages(images.filter((_, i) => i !== index));
+  };
+
+  const updateDescription = (index: number, description: string) => {
+    onChangeImages(images.map((img, i) => (i === index ? { ...img, description } : img)));
   };
 
   return (
@@ -73,41 +81,35 @@ export function StepWaterControl({
 
       {needed ? (
         <>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>
-              Water Control Images{imageUris.length > 0 ? `  ·  ${imageUris.length}` : ''}
-            </Text>
-            <View style={localStyles.imageGrid}>
-              {imageUris.map((uri, index) => (
-                <View key={`${uri}-${index}`} style={localStyles.imageWrapper}>
-                  <Image source={{ uri }} style={localStyles.image} resizeMode="cover" />
-                  <TouchableOpacity
-                    style={localStyles.removeBtn}
-                    onPress={() => removeImage(uri)}
-                    activeOpacity={0.8}>
-                    <IconSymbol name="xmark" size={10} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
-                <IconSymbol name="plus" size={22} color={ACCENT} />
+          <Text style={styles.fieldLabel}>
+            Water Control Images{images.length > 0 ? `  ·  ${images.length}` : ''}
+          </Text>
+
+          {images.map((img, index) => (
+            <View key={`${img.uri}-${index}`} style={localStyles.imageCard}>
+              <Image source={{ uri: img.uri }} style={localStyles.imageThumb} resizeMode="cover" />
+              <TextInput
+                style={[styles.input, localStyles.descInput]}
+                value={img.description}
+                onChangeText={(text) => updateDescription(index, text)}
+                placeholder="Description..."
+                placeholderTextColor="#aaa"
+                multiline
+                textAlignVertical="top"
+              />
+              <TouchableOpacity
+                style={localStyles.removeBtn}
+                onPress={() => removeImage(index)}
+                activeOpacity={0.8}>
+                <IconSymbol name="xmark" size={10} color="#fff" />
               </TouchableOpacity>
             </View>
-          </View>
+          ))}
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Short Description</Text>
-            <TextInput
-              style={[styles.input, localStyles.textArea]}
-              value={description}
-              onChangeText={onChangeDescription}
-              placeholder="Add a short description..."
-              placeholderTextColor="#aaa"
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
+          <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
+            <IconSymbol name="plus" size={18} color={ACCENT} />
+            <Text style={localStyles.addBtnText}>Add Image</Text>
+          </TouchableOpacity>
         </>
       ) : (
         <Text style={styles.emptyHint}>Water control is not needed for this element.</Text>
@@ -128,45 +130,51 @@ const localStyles = StyleSheet.create({
     color: '#444',
     fontWeight: '500',
   },
-  imageGrid: {
+  imageCard: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
     gap: 10,
-  },
-  imageWrapper: {
-    width: 88,
-    height: 88,
+    padding: 8,
     borderRadius: 10,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+    backgroundColor: '#fafafa',
   },
-  image: {
-    width: 88,
-    height: 88,
+  imageThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  descInput: {
+    flex: 1,
+    height: 80,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   removeBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
   },
   addBtn: {
-    width: 88,
-    height: 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: ACCENT,
     borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#f0f9ff',
   },
-  textArea: {
-    height: 80,
-    paddingTop: 10,
+  addBtnText: {
+    color: ACCENT,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
