@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -9,7 +10,13 @@ import {
 } from '@/constants/controls';
 import { Control, ControlImage } from '@/types/project';
 
-/** Convert any URI (file://, ph://, content://) to a base64 data URI. */
+/** Max width for PDF images (A4 content ~600px; 800px keeps quality with headroom). */
+const PDF_IMAGE_MAX_WIDTH = 800;
+
+/** JPEG quality for PDF export (0–1; 0.75 balances size vs quality). */
+const PDF_IMAGE_COMPRESS = 0.75;
+
+/** Convert any URI to a compressed base64 data URI for PDF embedding. */
 async function uriToBase64(uri: string): Promise<string> {
   try {
     let localUri = uri;
@@ -23,6 +30,26 @@ async function uriToBase64(uri: string): Promise<string> {
       localUri = dest;
     }
 
+    // Compress and resize before embedding to reduce PDF size
+    try {
+      const result = await manipulateAsync(
+        localUri,
+        [{ resize: { width: PDF_IMAGE_MAX_WIDTH } }],
+        {
+          format: SaveFormat.JPEG,
+          compress: PDF_IMAGE_COMPRESS,
+          base64: true,
+        }
+      );
+
+      if (result.base64) {
+        return `data:image/jpeg;base64,${result.base64}`;
+      }
+    } catch (manipulateError) {
+      console.warn('[exportControlPDF] image compression failed, using original:', uri, manipulateError);
+    }
+
+    // Fallback: use original image without compression
     const base64 = await FileSystem.readAsStringAsync(localUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
