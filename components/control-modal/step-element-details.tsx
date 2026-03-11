@@ -1,0 +1,101 @@
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import {
+  ELEMENT_TYPE_COLORS,
+  ELEMENT_TYPE_LABELS,
+} from '@/constants/controls';
+import { ElementType, Level } from '@/types/project';
+
+import { styles } from './styles';
+
+export type Step1Form = {
+  levelId: string;
+  elementName: string;
+  elementLocation: string;
+  elementType: ElementType | '';
+};
+
+export const EMPTY_STEP1: Step1Form = {
+  levelId: '',
+  elementName: '',
+  elementLocation: '',
+  elementType: '',
+};
+
+type Props = {
+  form: Step1Form;
+  levels: Level[];
+  onChange: (update: Partial<Step1Form>) => void;
+};
+
+export function StepElementDetails({ form, levels, onChange }: Props) {
+  return (
+    <View style={styles.stepBody}>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Level</Text>
+        {levels.length === 0 ? (
+          <Text style={styles.emptyHint}>No levels in this project yet</Text>
+        ) : (
+          <View style={styles.chipGrid}>
+            {levels.map((level) => (
+              <TouchableOpacity
+                key={level.id}
+                style={[styles.chip, form.levelId === level.id && styles.chipSelected]}
+                onPress={() => onChange({ levelId: level.id })}
+                activeOpacity={0.7}>
+                <Text style={[styles.chipText, form.levelId === level.id && styles.chipTextSelected]}>
+                  {level.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Element Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Column C1"
+          placeholderTextColor="#999"
+          value={form.elementName}
+          onChangeText={(v) => onChange({ elementName: v })}
+          returnKeyType="next"
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Location</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Axis A/1"
+          placeholderTextColor="#999"
+          value={form.elementLocation}
+          onChangeText={(v) => onChange({ elementLocation: v })}
+          returnKeyType="done"
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Element Type</Text>
+        <View style={styles.chipGrid}>
+          {Object.values(ElementType).map((type) => {
+            const color = ELEMENT_TYPE_COLORS[type];
+            const selected = form.elementType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                style={[styles.chip, selected && { backgroundColor: color, borderColor: color }]}
+                onPress={() => onChange({ elementType: type })}
+                activeOpacity={0.7}>
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                  {ELEMENT_TYPE_LABELS[type]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
