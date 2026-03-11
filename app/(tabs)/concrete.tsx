@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useGlobalSearchParams } from 'expo-router';
+import { router, useGlobalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
@@ -106,6 +106,14 @@ export default function ConcreteScreen() {
         headerImage={
           <ConcreteIcon width={220} height={220} fill="white" />
         }>
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace('/')}
+          activeOpacity={0.7}>
+          <IconSymbol name="chevron.left" size={18} color={ACCENT} />
+          <Text style={[styles.backButtonText, { color: ACCENT }]}>Back to Projects</Text>
+        </TouchableOpacity>
 
         {/* Title row */}
         <ThemedView style={styles.titleContainer}>
@@ -224,6 +232,16 @@ export default function ConcreteScreen() {
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
   headerImage: {
     color: '#808080',
     bottom: -120,

@@ -114,6 +114,13 @@ function renderInfoItem(label: string, value?: string | null, extraClass = ''): 
   `;
 }
 
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })
+    + ' '
+    + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
 export async function exportControlPDF(control: Control): Promise<void> {
   const typeColor =
     ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
@@ -519,6 +526,9 @@ export async function exportControlPDF(control: Control): Promise<void> {
         ${renderInfoItem('מיקום', control.elementLocation)}
         ${renderInfoItem('סוג בטון', control.concreateType?.name)}
         ${renderInfoItem('סוג אלמנט', typeLabel)}
+        ${(control.updatedAt ?? control.createdAt)
+          ? renderInfoItem('תאריך ושעה', formatDateTime(control.updatedAt ?? control.createdAt!))
+          : ''}
       </div>
     </div>
 

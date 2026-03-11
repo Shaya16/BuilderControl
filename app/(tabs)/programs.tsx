@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -187,6 +187,14 @@ export default function ProgramsScreen() {
         headerImage={
           <PlanIcon width={220} height={220} fill="white" />
         }>
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace('/')}
+          activeOpacity={0.7}>
+          <IconSymbol name="chevron.left" size={18} color={ACCENT} />
+          <Text style={[styles.backButtonText, { color: ACCENT }]}>Back to Projects</Text>
+        </TouchableOpacity>
 
         {/* Title row */}
         <ThemedView style={styles.titleContainer}>
@@ -441,6 +449,16 @@ export default function ProgramsScreen() {
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
   headerImage: {
     color: '#808080',
     bottom: 0,

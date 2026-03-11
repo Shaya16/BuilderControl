@@ -51,7 +51,9 @@ export type Control = {
     waterNeeded?:boolean;
     concreateType: ConcreteType;
     ConcreteControlImages?: ControlImage[];
+    /** ISO 8601 date-time string (e.g. from Date.toISOString()) */
     createdAt?: string;
+    /** ISO 8601 date-time string (e.g. from Date.toISOString()) */
     updatedAt?: string;
   };
 

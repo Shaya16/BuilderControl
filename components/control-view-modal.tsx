@@ -81,14 +81,6 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
             </TouchableOpacity>
           </View>
 
-          {!!(control.createdAt || control.updatedAt) && (
-            <Text style={viewStyles.dateText}>
-              {control.updatedAt
-                ? `Updated ${formatDate(control.updatedAt)}`
-                : `Created ${formatDate(control.createdAt!)}`}
-            </Text>
-          )}
-
           <View style={viewStyles.badgeRow}>
             <View style={[viewStyles.typeBadge, { borderColor: typeColor }]}>
               <Text style={[viewStyles.typeBadgeText, { color: typeColor }]}>{typeLabel}</Text>
@@ -102,6 +94,14 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
                 <IconSymbol name="mappin" size={11} color="#888" />
                 <Text style={viewStyles.chipLabel}>Location:</Text>
                 <Text style={viewStyles.chipText}>{control.elementLocation}</Text>
+              </View>
+            )}
+            {!!(control.createdAt || control.updatedAt) && (
+              <View style={viewStyles.chip}>
+                <IconSymbol name="clock" size={11} color="#888" />
+                <Text style={viewStyles.chipText}>
+                  {formatDate(control.updatedAt ?? control.createdAt!)}
+                </Text>
               </View>
             )}
             <View style={viewStyles.concreteBadge}>
@@ -314,10 +314,6 @@ const viewStyles = StyleSheet.create({
     fontWeight: '700',
     color: '#11181C',
     flex: 1,
-  },
-  dateText: {
-    fontSize: 11,
-    color: '#aaa',
   },
   badgeRow: {
     flexDirection: 'row',

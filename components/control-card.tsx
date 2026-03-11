@@ -16,11 +16,28 @@ type Props = {
   onPress: (control: Control) => void;
 };
 
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const day = d.getDate();
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year} · ${hours}:${minutes}`;
+}
+
 export function ControlCard({ control, onPress }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const typeColor =
     ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
     DEFAULT_ELEMENT_TYPE_COLOR;
+
+  const timestampValue = control.updatedAt
+    ? formatTimestamp(control.updatedAt)
+    : control.createdAt
+      ? formatTimestamp(control.createdAt)
+      : null;
 
   return (
     <TouchableOpacity onPress={() => onPress(control)} activeOpacity={0.7}>
@@ -54,6 +71,17 @@ export function ControlCard({ control, onPress }: Props) {
                 </ThemedView>
               </>
             ) : null}
+            {timestampValue && (
+              <>
+                <View style={styles.metaDot} />
+                <ThemedView style={styles.metaChip}>
+                  <IconSymbol name="clock" size={10} color={Colors[colorScheme].icon} />
+                  <ThemedText style={[styles.metaValue, styles.timestampText, { color: Colors[colorScheme].icon }]}>
+                    {timestampValue}
+                  </ThemedText>
+                </ThemedView>
+              </>
+            )}
             {control.programs.length > 0 && (
               <>
                 <View style={styles.metaDot} />
@@ -152,5 +180,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#555',
+  },
+  timestampText: {
+    fontSize: 11,
   },
 });
