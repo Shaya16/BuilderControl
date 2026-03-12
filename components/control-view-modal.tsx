@@ -492,10 +492,11 @@ const viewStyles = StyleSheet.create({
     textAlign: 'right',
   },
   programCard: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+    backgroundColor: '#fafafa',
     gap: 10,
   },
   programRow: {
@@ -508,14 +509,15 @@ const viewStyles = StyleSheet.create({
   programImageWrap: {
     width: '100%',
     position: 'relative',
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
   },
   programImage: {
     width: '100%',
-    height: 180,
-    borderRadius: 8,
+    height: 120,
   },
   programDot: {
     width: 6,

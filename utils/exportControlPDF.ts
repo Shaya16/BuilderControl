@@ -149,18 +149,20 @@ async function programsToHtml(programs: Program[]): Promise<string> {
       let imgHtml = '';
       if (p.imageUri) {
         const src = await uriToBase64(p.imageUri);
-        imgHtml = src
-          ? `
-            <div class="image-frame">
-              <img src="${src}" class="section-image program-image" />
+        if (src) {
+          imgHtml = `
+            <div class="program-card-image">
+              <img src="${src}" />
             </div>
-          `
-          : '';
+          `;
+        }
       }
 
+      const hasImage = !!imgHtml;
+
       return `
-        <div class="program-card">
-          <div class="program-card-header">
+        <div class="program-card ${hasImage ? 'program-card--with-image' : ''}">
+          <div class="program-card-info">
             <div class="program-card-title">${escapeHtml(p.name)}</div>
             <div class="program-card-meta">
               <span>מס׳ ${escapeHtml(String(p.number ?? ''))}</span>
@@ -404,37 +406,44 @@ export async function exportControlPDF(control: Control): Promise<void> {
     }
 
     .programs-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .program-card {
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
       background: #fff;
       page-break-inside: avoid;
+      padding: 14px;
     }
 
-    .program-card-header {
-      padding: 12px 14px;
-      background: #fbfcfd;
-      border-bottom: 1px solid var(--soft-line);
+    .program-card--with-image {
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .program-card-info {
+      flex: 1;
+      min-width: 0;
     }
 
     .program-card-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
       color: #0f172a;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .program-card-meta {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       display: flex;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
@@ -442,8 +451,21 @@ export async function exportControlPDF(control: Control): Promise<void> {
       color: #475569;
     }
 
-    .program-image {
-      max-height: 320px;
+    .program-card-image {
+      flex-shrink: 0;
+      width: 160px;
+      height: 110px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--soft-line);
+      background: #f8fafc;
+    }
+
+    .program-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
     }
 
     .img-grid {
