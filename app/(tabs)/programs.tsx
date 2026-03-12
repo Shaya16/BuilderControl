@@ -32,7 +32,7 @@ import PlanIcon from '@/assets/icons/docs.svg';
 import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
-const EMPTY_FORM = { name: '', number: '', version: '', date: '', imageUri: '' };
+const EMPTY_FORM = { name: '', number: '', version: '', date: '', imageUri: '', latestVersion: true };
 
 export default function ProgramsScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
@@ -91,6 +91,7 @@ export default function ProgramsScreen() {
       version: program.version,
       date: program.date,
       imageUri: program.imageUri ?? '',
+      latestVersion: program.latestVersion ?? false,
     });
     setModalVisible(true);
   };
@@ -104,6 +105,7 @@ export default function ProgramsScreen() {
       version: '',
       date: '',
       imageUri: '',
+      latestVersion: true,
     });
   };
 
@@ -157,7 +159,7 @@ export default function ProgramsScreen() {
       version: form.version.trim(),
       date: form.date.trim(),
       imageUri: form.imageUri || undefined,
-      latestVersion: true,
+      latestVersion: form.latestVersion,
     };
     console.log('programData', programData);
 
@@ -166,7 +168,7 @@ export default function ProgramsScreen() {
       const demoted = (project.programs ?? []).map((p) =>
         p.id === editingProgram.id ? { ...p, latestVersion: false } : p
       );
-      const newProgram: Program = { id: Date.now().toString(), ...programData, latestVersion: true };
+      const newProgram: Program = { id: Date.now().toString(), ...programData };
       saveProject({ ...project, programs: [...demoted, newProgram] });
     } else if (editingProgram) {
       const updatedPrograms = (project.programs ?? []).map((p) =>
@@ -380,6 +382,19 @@ export default function ProgramsScreen() {
                 )}
               </View>
 
+              {/* Latest version checkbox */}
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setForm((f) => ({ ...f, latestVersion: !f.latestVersion }))}
+                activeOpacity={0.7}>
+                <IconSymbol
+                  name={form.latestVersion ? 'checkmark.square.fill' : 'square'}
+                  size={24}
+                  color={form.latestVersion ? ACCENT : '#999'}
+                />
+                <Text style={styles.checkboxLabel}>גרסה אחרונה</Text>
+              </TouchableOpacity>
+
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.cancelButton}
@@ -562,6 +577,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: '#11181C',
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#11181C',
+    fontWeight: '500',
   },
   modalActions: {
     flexDirection: 'row',

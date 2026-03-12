@@ -4,7 +4,6 @@ import {
   Alert,
   Image,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,9 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import * as Sharing from 'expo-sharing';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
@@ -41,6 +43,7 @@ type Props = {
 
 export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
   const [exporting, setExporting] = useState(false);
+  const insets = useSafeAreaInsets();
 
   if (!control) return null;
 
@@ -70,7 +73,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
       animationType="slide"
       onRequestClose={onClose}>
       <Pressable style={viewStyles.overlay} onPress={onClose} />
-      <View style={viewStyles.sheet}>
+      <View style={[viewStyles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={viewStyles.dragHandle} />
 
         {/* ── Header ── */}
@@ -272,13 +275,31 @@ function Section({ title, count, badge, children, style }: SectionProps) {
 
 function ImageList({ images }: { images?: ControlImage[] }) {
   if (!images || images.length === 0) {
-    return <Text style={viewStyles.emptyHint}>No images.</Text>;
+    return <Text style={viewStyles.emptyHint}>אין תמונות</Text>;
   }
+
+  const handleDownload = async (uri: string) => {
+    const available = await Sharing.isAvailableAsync();
+    if (!available) {
+      Alert.alert('Sharing not available', 'Cannot share on this device.');
+      return;
+    }
+    await Sharing.shareAsync(uri);
+  };
+
   return (
     <View style={viewStyles.imageList}>
       {images.map((img, index) => (
         <View key={`${img.uri}-${index}`} style={viewStyles.imageCard}>
-          <Image source={{ uri: img.uri }} style={viewStyles.imageThumb} resizeMode="cover" />
+          <View style={viewStyles.imageWrapper}>
+            <Image source={{ uri: img.uri }} style={viewStyles.imageThumb} resizeMode="cover" />
+            <TouchableOpacity
+              style={viewStyles.downloadBtn}
+              onPress={() => handleDownload(img.uri)}
+              activeOpacity={0.8}>
+              <IconSymbol name="square.and.arrow.down" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
           {!!img.description && (
             <Text style={viewStyles.imageDesc}>{img.description}</Text>
           )}
@@ -304,7 +325,6 @@ const viewStyles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '90%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
   },
   dragHandle: {
     width: 40,
@@ -401,11 +421,13 @@ const viewStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     gap: 10,
+    writingDirection: 'rtl',
     direction: 'rtl',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    writingDirection: 'rtl',
     gap: 8,
   },
   sectionTitle: {
@@ -422,6 +444,7 @@ const viewStyles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 10,
     borderWidth: 1,
+    writingDirection: 'rtl',
   },
   sectionBadgeText: {
     fontSize: 11,
@@ -499,10 +522,22 @@ const viewStyles = StyleSheet.create({
     borderColor: '#eee',
     backgroundColor: '#fafafa',
   },
+  imageWrapper: {
+    width: '100%',
+    position: 'relative',
+  },
   imageThumb: {
     width: '100%',
     height: 200,
     borderRadius: 8,
+  },
+  downloadBtn: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 8,
+    padding: 7,
   },
   imageDesc: {
     flex: 1,

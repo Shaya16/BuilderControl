@@ -33,6 +33,8 @@ const MAPPING = {
   'photo': 'photo',
   'doc.on.doc': 'content-copy',
   'checkmark': 'check',
+  'checkmark.square.fill': 'check-box',
+  'square': 'check-box-outline-blank',
   'mappin': 'place',
 } as IconMapping;
 
