@@ -126,12 +126,28 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
           {control.programs.length > 0 && (
             <Section title="תוכניות">
               {control.programs.map((p) => (
-                <View key={p.id} style={viewStyles.programRow}>
-                  <View style={viewStyles.programNameWrap}>
-                    <Text style={viewStyles.programName}>{p.name}</Text>
-                    <View style={viewStyles.programDot} />
+                <View key={p.id} style={viewStyles.programCard}>
+                  <View style={viewStyles.programRow}>
+                    <View style={viewStyles.programNameWrap}>
+                      <Text style={viewStyles.programName}>{p.name}</Text>
+                      <View style={viewStyles.programDot} />
+                    </View>
+                    <Text style={viewStyles.programMeta}>מס׳ -  {p.number}  ·  v{p.version}  ·  {p.date}</Text>
                   </View>
-                  <Text style={viewStyles.programMeta}>מס׳ -  {p.number}  ·  v{p.version}  ·  {p.date}</Text>
+                  {p.imageUri && (
+                    <View style={viewStyles.programImageWrap}>
+                      <Image source={{ uri: p.imageUri }} style={viewStyles.programImage} resizeMode="contain" />
+                      <TouchableOpacity
+                        style={viewStyles.downloadBtn}
+                        onPress={async () => {
+                          const available = await Sharing.isAvailableAsync();
+                          if (available) await Sharing.shareAsync(p.imageUri!);
+                        }}
+                        activeOpacity={0.8}>
+                        <IconSymbol name="square.and.arrow.down" size={18} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
             </Section>
@@ -475,15 +491,31 @@ const viewStyles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'right',
   },
+  programCard: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#f0f0f0',
+    gap: 10,
+  },
   programRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f0f0f0',
     direction: 'ltr',
+  },
+  programImageWrap: {
+    width: '100%',
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
+  },
+  programImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
   },
   programDot: {
     width: 6,

@@ -8,7 +8,7 @@ import {
   ELEMENT_TYPE_COLORS,
   ELEMENT_TYPE_LABELS,
 } from '@/constants/controls';
-import { Control, ControlImage } from '@/types/project';
+import { Control, ControlImage, Program } from '@/types/project';
 
 /** Max width for PDF images (A4 content ~600px; 800px keeps quality with headroom). */
 const PDF_IMAGE_MAX_WIDTH = 800;
@@ -141,6 +141,53 @@ function renderInfoItem(label: string, value?: string | null, extraClass = ''): 
   `;
 }
 
+async function programsToHtml(programs: Program[]): Promise<string> {
+  if (!programs || programs.length === 0) return '';
+
+  const cards = await Promise.all(
+    programs.map(async (p) => {
+      let imgHtml = '';
+      if (p.imageUri) {
+        const src = await uriToBase64(p.imageUri);
+        imgHtml = src
+          ? `
+            <div class="image-frame">
+              <img src="${src}" class="section-image program-image" />
+            </div>
+          `
+          : '';
+      }
+
+      return `
+        <div class="program-card">
+          <div class="program-card-header">
+            <div class="program-card-title">${escapeHtml(p.name)}</div>
+            <div class="program-card-meta">
+              <span>מס׳ ${escapeHtml(String(p.number ?? ''))}</span>
+              <span>גרסה ${escapeHtml(String(p.version ?? ''))}</span>
+              <span>${escapeHtml(String(p.date ?? ''))}</span>
+            </div>
+          </div>
+          ${imgHtml}
+        </div>
+      `;
+    })
+  );
+
+  return `
+    <section class="section-card">
+      <div class="section-head">
+        <h2>תוכניות</h2>
+        <div class="section-subtitle">מסמכים ותוכניות קשורות</div>
+      </div>
+
+      <div class="programs-grid">
+        ${cards.join('')}
+      </div>
+    </section>
+  `;
+}
+
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -166,72 +213,37 @@ export async function exportControlPDF(control: Control): Promise<void> {
     ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ??
     String(control.elementType);
 
-  const [ironHtml, electricHtml, installationHtml, waterHtml, otherHtml, concreteHtml] = await Promise.all([
-    imagesToHtml(control.IronControlImages),
-    control.electricNeeded === false
-      ? Promise.resolve(`
-          <div class="status-box not-needed-box">
-            <span class="status-dot"></span>
-            לא נדרש עבור אלמנט זה
-          </div>
-        `)
-      : imagesToHtml(control.ElectricalControlImages),
-    control.installationNeeded === false
-      ? Promise.resolve(`
-          <div class="status-box not-needed-box">
-            <span class="status-dot"></span>
-            לא נדרש עבור אלמנט זה
-          </div>
-        `)
-      : imagesToHtml(control.InstallationControlImages),
-    control.waterNeeded === false
-      ? Promise.resolve(`
-          <div class="status-box not-needed-box">
-            <span class="status-dot"></span>
-            לא נדרש עבור אלמנט זה
-          </div>
-        `)
-      : imagesToHtml(control.WaterControlImages),
-    imagesToHtml(control.otherControlImages),
-    imagesToHtml(control.ConcreteControlImages),
-  ]);
-
-  const programsHtml =
-    control.programs.length === 0
-      ? ''
-      : `
-        <section class="section-card">
-          <div class="section-head">
-            <h2>תוכניות</h2>
-            <div class="section-subtitle">מסמכים ותוכניות קשורות</div>
-          </div>
-
-          <table class="programs-table">
-            <thead>
-              <tr>
-                <th>שם</th>
-                <th>מספר</th>
-                <th>גרסה</th>
-                <th>תאריך</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${control.programs
-                .map(
-                  (p) => `
-                    <tr>
-                      <td>${escapeHtml(p.name)}</td>
-                      <td>${escapeHtml(String(p.number ?? ''))}</td>
-                      <td>v${escapeHtml(String(p.version ?? ''))}</td>
-                      <td>${escapeHtml(String(p.date ?? ''))}</td>
-                    </tr>
-                  `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </section>
-      `;
+  const [programsHtml, ironHtml, electricHtml, installationHtml, waterHtml, otherHtml, concreteHtml] =
+    await Promise.all([
+      programsToHtml(control.programs),
+      imagesToHtml(control.IronControlImages),
+      control.electricNeeded === false
+        ? Promise.resolve(`
+            <div class="status-box not-needed-box">
+              <span class="status-dot"></span>
+              לא נדרש עבור אלמנט זה
+            </div>
+          `)
+        : imagesToHtml(control.ElectricalControlImages),
+      control.installationNeeded === false
+        ? Promise.resolve(`
+            <div class="status-box not-needed-box">
+              <span class="status-dot"></span>
+              לא נדרש עבור אלמנט זה
+            </div>
+          `)
+        : imagesToHtml(control.InstallationControlImages),
+      control.waterNeeded === false
+        ? Promise.resolve(`
+            <div class="status-box not-needed-box">
+              <span class="status-dot"></span>
+              לא נדרש עבור אלמנט זה
+            </div>
+          `)
+        : imagesToHtml(control.WaterControlImages),
+      imagesToHtml(control.otherControlImages),
+      imagesToHtml(control.ConcreteControlImages),
+    ]);
 
   const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -391,38 +403,47 @@ export async function exportControlPDF(control: Control): Promise<void> {
       color: var(--muted);
     }
 
-    .programs-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      overflow: hidden;
+    .programs-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .program-card {
       border: 1px solid var(--line);
-      border-radius: 14px;
-      font-size: 13px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+      page-break-inside: avoid;
     }
 
-    .programs-table thead th {
-      background: var(--table-head);
-      color: #374151;
-      font-weight: 800;
+    .program-card-header {
       padding: 12px 14px;
-      border-bottom: 1px solid var(--line);
-      text-align: right;
-    }
-
-    .programs-table tbody td {
-      padding: 12px 14px;
+      background: #fbfcfd;
       border-bottom: 1px solid var(--soft-line);
-      text-align: right;
-      color: #1f2937;
     }
 
-    .programs-table tbody tr:nth-child(even) td {
-      background: #fcfdff;
+    .program-card-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6px;
     }
 
-    .programs-table tbody tr:last-child td {
-      border-bottom: none;
+    .program-card-meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .program-card-meta span {
+      color: #475569;
+    }
+
+    .program-image {
+      max-height: 320px;
     }
 
     .img-grid {
