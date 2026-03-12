@@ -10,13 +10,80 @@ import {
 } from '@/constants/controls';
 import { Control, ControlImage, Program } from '@/types/project';
 
-/** Max width for PDF images (A4 content ~600px; 800px keeps quality with headroom). */
 const PDF_IMAGE_MAX_WIDTH = 800;
-
-/** JPEG quality for PDF export (0–1; 0.75 balances size vs quality). */
 const PDF_IMAGE_COMPRESS = 0.75;
 
-/** Convert any URI to a compressed base64 data URI for PDF embedding. */
+const A4_WIDTH = 595;
+const A4_HEIGHT = 842;
+const DEBUG_LOG_ENDPOINT = 'http://127.0.0.1:7243/ingest/0563c332-c1a6-4a1d-8d03-7d74631f6e53';
+
+function debugPdfLog(params: {
+  runId: string;
+  hypothesisId: string;
+  location: string;
+  message: string;
+  data: Record<string, unknown>;
+}): void {
+  if (!__DEV__) return;
+  fetch(DEBUG_LOG_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      runId: params.runId,
+      hypothesisId: params.hypothesisId,
+      location: params.location,
+      message: params.message,
+      data: params.data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+}
+
+function escapeHtml(text: string | undefined | null): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return (
+    d.toLocaleDateString(undefined, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }) +
+    ' ' +
+    d.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  );
+}
+
+function sanitizeFilenamePart(value: string | undefined | null): string {
+  if (!value) return '';
+  return (
+    String(value)
+      .replace(/[/\\:*?"<>|]/g, '_')
+      .replace(/\s+/g, '_')
+      .trim() || ''
+  );
+}
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  if (size <= 0) return [arr];
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
+
 async function uriToBase64(uri: string): Promise<string> {
   try {
     let localUri = uri;
@@ -24,13 +91,16 @@ async function uriToBase64(uri: string): Promise<string> {
     if (!uri.startsWith('file://')) {
       const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
       if (!cacheDir) throw new Error('No cache or document directory available');
+
       const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'jpg';
-      const dest = `${cacheDir}pdf_img_${Date.now()}.${ext}`;
+      const dest = `${cacheDir}pdf_img_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2)}.${ext}`;
+
       await FileSystem.copyAsync({ from: uri, to: dest });
       localUri = dest;
     }
 
-    // Compress and resize before embedding to reduce PDF size
     try {
       const result = await manipulateAsync(
         localUri,
@@ -45,11 +115,10 @@ async function uriToBase64(uri: string): Promise<string> {
       if (result.base64) {
         return `data:image/jpeg;base64,${result.base64}`;
       }
-    } catch (manipulateError) {
-      console.warn('[exportControlPDF] image compression failed, using original:', uri, manipulateError);
+    } catch (err) {
+      console.warn('[exportControlPDF] image compression failed, using original:', uri, err);
     }
 
-    // Fallback: use original image without compression
     const base64 = await FileSystem.readAsStringAsync(localUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
@@ -71,245 +140,415 @@ async function uriToBase64(uri: string): Promise<string> {
   }
 }
 
-function escapeHtml(text: string | undefined | null): string {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-async function imagesToHtml(images: ControlImage[] | undefined): Promise<string> {
-  if (!images || images.length === 0) {
-    return `
-      <div class="empty-state">
-        <div class="empty-icon">-</div>
-        <div class="empty-text">לא נוספו תמונות עבור סעיף זה</div>
-      </div>
-    `;
-  }
-
-  const blocks = await Promise.all(
-    images.map(async (img, index) => {
-      const src = await uriToBase64(img.uri);
-
-      const imgTag = src
-        ? `
-          <div class="image-frame">
-            <img src="${src}" class="section-image" />
-          </div>
-        `
-        : `
-          <div class="image-frame image-placeholder">
-            <div>תמונה לא זמינה</div>
-          </div>
-        `;
-
-      const desc = img.description?.trim()
-        ? `
-          <div class="note-box">
-            <div class="note-title">הערות</div>
-            <div class="note-content">${escapeHtml(img.description)}</div>
-          </div>
-        `
-        : '';
-
-      return `
-        <div class="img-card">
-          <div class="img-card-header">
-            <div class="img-index">תמונה ${index + 1}</div>
-          </div>
-          ${imgTag}
-          ${desc}
-        </div>
-      `;
-    })
-  );
-
-  return `<div class="img-grid">${blocks.join('')}</div>`;
-}
-
-function renderInfoItem(label: string, value?: string | null, extraClass = ''): string {
+function renderInfoItem(label: string, value?: string | null): string {
   if (!value) return '';
   return `
-    <div class="info-item ${extraClass}">
-      <div class="info-label">${label}</div>
+    <div class="info-item">
+      <div class="info-label">${escapeHtml(label)}</div>
       <div class="info-value">${escapeHtml(value)}</div>
     </div>
   `;
 }
 
-async function programsToHtml(programs: Program[]): Promise<string> {
-  if (!programs || programs.length === 0) return '';
+function renderPage(params: {
+  headerTitle: string;
+  body: string;
+  footerLeft?: string;
+  footerRight?: string;
+  pageNumber?: number;
+  totalPages?: number;
+}): string {
+  const {
+    headerTitle,
+    body,
+    footerLeft = 'Structural Planner',
+    footerRight = 'דוח בקרה',
+    pageNumber,
+    totalPages,
+  } = params;
 
-  const cards = await Promise.all(
-    programs.map(async (p) => {
-      let imgHtml = '';
-      if (p.imageUri) {
-        const src = await uriToBase64(p.imageUri);
+  const pageNumberHtml =
+    pageNumber != null && totalPages != null
+      ? `<div class="footer-page">עמוד ${pageNumber} מתוך ${totalPages}</div>`
+      : '';
+
+  return `
+    <div class="pdf-page">
+      <div class="page-header">
+        <div class="header-logo">LOGO</div>
+        <div class="header-title">${escapeHtml(headerTitle)}</div>
+      </div>
+
+      <div class="page-content">
+        ${body}
+      </div>
+
+      <div class="page-footer">
+        <div class="footer-branding">
+          <span class="footer-watermark">${escapeHtml(footerLeft)}</span>
+          <span class="footer-credit">BY SHAY AVIVI</span>
+        </div>
+        ${pageNumberHtml}
+        <div class="footer-label">${escapeHtml(footerRight)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSection(title: string, subtitle: string, content: string): string {
+  return `
+    <section class="section-card">
+      <div class="section-head">
+        <h2>${escapeHtml(title)}</h2>
+        <div class="section-subtitle">${escapeHtml(subtitle)}</div>
+      </div>
+      ${content}
+    </section>
+  `;
+}
+
+function renderStatusCard(message: string): string {
+  return `
+    <div class="status-card">
+      <span class="status-dot"></span>
+      ${escapeHtml(message)}
+    </div>
+  `;
+}
+
+function renderEmptyState(message: string): string {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-text">${escapeHtml(message)}</div>
+    </div>
+  `;
+}
+
+async function programsToCards(programs: Program[] | undefined): Promise<string[]> {
+  if (!programs || programs.length === 0) return [];
+
+  return Promise.all(
+    programs.map(async (program) => {
+      let imageHtml = '';
+
+      if (program.imageUri) {
+        const src = await uriToBase64(program.imageUri);
         if (src) {
-          imgHtml = `
-            <div class="program-card-image">
+          imageHtml = `
+            <div class="program-image">
               <img src="${src}" />
             </div>
           `;
         }
       }
 
-      const hasImage = !!imgHtml;
-
       return `
-        <div class="program-card ${hasImage ? 'program-card--with-image' : ''}">
-          <div class="program-card-info">
-            <div class="program-card-title">${escapeHtml(p.name)}</div>
-            <div class="program-card-meta">
-              <span>מס׳ ${escapeHtml(String(p.number ?? ''))}</span>
-              <span>גרסה ${escapeHtml(String(p.version ?? ''))}</span>
-              <span>${escapeHtml(String(p.date ?? ''))}</span>
+        <div class="program-card ${imageHtml ? 'program-card-with-image' : ''}">
+          <div class="program-main">
+            <div class="program-title">${escapeHtml(program.name)}</div>
+            <div class="program-meta">
+              ${program.number != null ? `<span>מס׳ ${escapeHtml(String(program.number))}</span>` : ''}
+              ${program.version != null ? `<span>גרסה ${escapeHtml(String(program.version))}</span>` : ''}
+              ${program.date ? `<span>${escapeHtml(String(program.date))}</span>` : ''}
             </div>
           </div>
-          ${imgHtml}
+          ${imageHtml}
         </div>
       `;
     })
   );
-
-  return `
-    <section class="section-card">
-      <div class="section-head">
-        <h2>תוכניות</h2>
-        <div class="section-subtitle">מסמכים ותוכניות קשורות</div>
-      </div>
-
-      <div class="programs-grid">
-        ${cards.join('')}
-      </div>
-    </section>
-  `;
 }
 
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })
-    + ' '
-    + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+const IMAGE_BATCH_SIZE = 3;
+
+async function imagesToCards(images: ControlImage[] | undefined): Promise<string[]> {
+  if (!images || images.length === 0) {
+    return [renderEmptyState('לא נוספו תמונות עבור סעיף זה')];
+  }
+
+  const results: string[] = [];
+  for (let batchStart = 0; batchStart < images.length; batchStart += IMAGE_BATCH_SIZE) {
+    const batch = images.slice(batchStart, batchStart + IMAGE_BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(async (img, batchIndex) => {
+        const index = batchStart + batchIndex;
+        const src = await uriToBase64(img.uri);
+
+        const imageHtml = src
+          ? `
+            <div class="image-wrap">
+              <img src="${src}" class="section-image" />
+            </div>
+          `
+          : `
+            <div class="image-wrap image-placeholder">
+              <div>תמונה לא זמינה</div>
+            </div>
+          `;
+
+        const noteHtml = img.description?.trim()
+          ? `
+            <div class="note-box">
+              <div class="note-title">הערות</div>
+              <div class="note-content">${escapeHtml(img.description)}</div>
+            </div>
+          `
+          : '';
+
+        return `
+          <div class="image-card">
+            <div class="image-card-header">תמונה ${index + 1}</div>
+            ${imageHtml}
+            ${noteHtml}
+          </div>
+        `;
+      })
+    );
+    results.push(...batchResults);
+  }
+  return results;
 }
 
-/** Sanitize a string for use in filenames (replace spaces/slashes with underscores). */
-function sanitizeFilenamePart(value: string | undefined | null): string {
-  if (!value) return '';
-  return String(value)
-    .replace(/[/\\:*?"<>|]/g, '_')
-    .replace(/\s+/g, '_')
-    .trim() || '';
+function renderProgramsPages(params: {
+  headerTitle: string;
+  cards: string[];
+  cardsPerPage?: number;
+  runId?: string;
+  startPageIndex?: number;
+  totalPages?: number;
+}): string {
+  const { headerTitle, cards, cardsPerPage = 4, runId, startPageIndex, totalPages } = params;
+  if (!cards.length) return '';
+
+  const chunks = chunkArray(cards, cardsPerPage);
+
+  if (runId) {
+    // #region agent log
+    debugPdfLog({
+      runId,
+      hypothesisId: 'H_LAYOUT_CHUNKING',
+      location: 'utils/exportControlPDF.ts:renderProgramsPages',
+      message: 'Program pages chunked',
+      data: {
+        headerTitle,
+        cardsCount: cards.length,
+        cardsPerPage,
+        chunkCount: chunks.length,
+        chunkSizes: chunks.map((chunk) => chunk.length),
+      },
+    });
+    // #endregion
+  }
+
+  return chunks
+    .map((chunk, i) =>
+      renderPage({
+        headerTitle,
+        body: renderSection(
+          'תוכניות',
+          'מסמכים ותוכניות קשורות',
+          `<div class="stack">${chunk.join('')}</div>`
+        ),
+        pageNumber: startPageIndex != null && totalPages != null ? startPageIndex + i : undefined,
+        totalPages,
+      })
+    )
+    .join('');
 }
 
-export async function exportControlPDF(control: Control): Promise<void> {
-  const typeColor =
-    ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
-    DEFAULT_ELEMENT_TYPE_COLOR;
+function renderImagePages(params: {
+  headerTitle: string;
+  title: string;
+  subtitle: string;
+  cards: string[];
+  cardsPerPage?: number;
+  runId?: string;
+  startPageIndex?: number;
+  totalPages?: number;
+}): string {
+  const { headerTitle, title, subtitle, cards, cardsPerPage = 4, runId, startPageIndex, totalPages } = params;
+  if (!cards.length) return '';
 
-  const typeLabel =
-    ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ??
-    String(control.elementType);
+  const chunks = chunkArray(cards, cardsPerPage);
 
-  const [programsHtml, ironHtml, electricHtml, installationHtml, waterHtml, otherHtml, concreteHtml] =
-    await Promise.all([
-      programsToHtml(control.programs),
-      imagesToHtml(control.IronControlImages),
-      control.electricNeeded === false
-        ? Promise.resolve(`
-            <div class="status-box not-needed-box">
-              <span class="status-dot"></span>
-              לא נדרש עבור אלמנט זה
-            </div>
-          `)
-        : imagesToHtml(control.ElectricalControlImages),
-      control.installationNeeded === false
-        ? Promise.resolve(`
-            <div class="status-box not-needed-box">
-              <span class="status-dot"></span>
-              לא נדרש עבור אלמנט זה
-            </div>
-          `)
-        : imagesToHtml(control.InstallationControlImages),
-      control.waterNeeded === false
-        ? Promise.resolve(`
-            <div class="status-box not-needed-box">
-              <span class="status-dot"></span>
-              לא נדרש עבור אלמנט זה
-            </div>
-          `)
-        : imagesToHtml(control.WaterControlImages),
-      imagesToHtml(control.otherControlImages),
-      imagesToHtml(control.ConcreteControlImages),
-    ]);
+  if (runId) {
+    // #region agent log
+    debugPdfLog({
+      runId,
+      hypothesisId: 'H_LAYOUT_CHUNKING',
+      location: 'utils/exportControlPDF.ts:renderImagePages',
+      message: 'Image pages chunked',
+      data: {
+        title,
+        subtitle,
+        cardsCount: cards.length,
+        cardsPerPage,
+        chunkCount: chunks.length,
+        chunkSizes: chunks.map((chunk) => chunk.length),
+      },
+    });
+    // #endregion
+  }
 
-  const html = `<!DOCTYPE html>
+  return chunks
+    .map((chunk, i) =>
+      renderPage({
+        headerTitle,
+        body: renderSection(
+          title,
+          subtitle,
+          `<div class="grid-2">${chunk.join('')}</div>`
+        ),
+        pageNumber: startPageIndex != null && totalPages != null ? startPageIndex + i : undefined,
+        totalPages,
+      })
+    )
+    .join('');
+}
+
+function buildHtmlDocument(pages: string, typeColor: string): string {
+  return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     @page {
-      size: A4;
-      margin: 18mm 14mm 18mm 14mm;
-    }
-
-    :root {
-      --accent: ${typeColor};
-      --accent-soft: ${typeColor}15;
-      --bg: #f4f6f8;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --line: #e5e7eb;
-      --soft-line: #eef2f7;
-      --chip-bg: #f8fafc;
-      --table-head: #f8fafc;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-      --radius-lg: 18px;
-      --radius-md: 12px;
-      --radius-sm: 10px;
+      size: ${A4_WIDTH}pt ${A4_HEIGHT}pt;
+      margin: 0;
     }
 
     * {
       box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     html, body {
       margin: 0;
       padding: 0;
+      background: #fff;
+      color: #111827;
       direction: rtl;
       text-align: right;
       font-family: Arial, Helvetica, sans-serif;
-      color: var(--text);
-      background: var(--bg);
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    body {
-      padding: 0;
       font-size: 13px;
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
-    .report {
-      width: 100%;
+    :root {
+      --accent: ${typeColor};
+      --accent-soft: ${typeColor}18;
+      --line: #e5e7eb;
+      --muted: #6b7280;
+      --soft-bg: #f8fafc;
+      --section-bg: #ffffff;
+    }
+
+    .pdf-page {
+      width: ${A4_WIDTH}pt;
+      padding: 22pt 14pt 16pt 14pt;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .pdf-page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    .page-header {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 8pt;
+      border-bottom: 2px solid var(--accent);
+      flex-shrink: 0;
+    }
+
+    .header-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #e2e8f0;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .page-content {
+      padding-top: 12pt;
+      padding-bottom: 12pt;
+    }
+
+    .page-footer {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16pt;
+      padding-top: 6pt;
+      border-top: 1px solid var(--line);
+    }
+
+    .footer-branding {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .footer-watermark {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+
+    .footer-credit {
+      font-size: 8px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .footer-label,
+    .footer-page {
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .footer-page {
+      flex: 1;
+      text-align: center;
     }
 
     .hero {
-      background: linear-gradient(135deg, #ffffff 0%, #f9fbfc 100%);
       border: 1px solid var(--line);
       border-top: 6px solid var(--accent);
-      border-radius: 22px;
-      padding: 22px;
-      box-shadow: var(--shadow);
-      margin-bottom: 18px;
+      border-radius: 20px;
+      padding: 20px;
+      background: linear-gradient(135deg, #ffffff 0%, #fafcff 100%);
       page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .hero-top {
@@ -322,6 +561,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
 
     .title-wrap {
       flex: 1;
+      min-width: 0;
     }
 
     .title {
@@ -330,6 +570,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       line-height: 1.2;
       font-weight: 800;
       color: #0f172a;
+      word-break: break-word;
     }
 
     .subtitle {
@@ -343,7 +584,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       border-radius: 999px;
       background: var(--accent-soft);
       color: var(--accent);
-      border: 1px solid ${typeColor}40;
+      border: 1px solid ${typeColor}55;
       font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
@@ -353,14 +594,15 @@ export async function exportControlPDF(control: Control): Promise<void> {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+      margin-top: 12px;
     }
 
     .info-item {
-      background: var(--chip-bg);
-      border: 1px solid var(--soft-line);
-      border-radius: 14px;
-      padding: 12px 14px;
-      min-height: 64px;
+      border: 1px solid #edf2f7;
+      background: var(--soft-bg);
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 60px;
     }
 
     .info-label {
@@ -373,24 +615,21 @@ export async function exportControlPDF(control: Control): Promise<void> {
     .info-value {
       font-size: 14px;
       font-weight: 700;
-      color: var(--text);
+      color: #111827;
       word-break: break-word;
     }
 
     .section-card {
-      background: var(--card);
       border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
+      border-radius: 18px;
+      background: var(--section-bg);
       padding: 18px;
-      box-shadow: var(--shadow);
-      margin-bottom: 16px;
-      page-break-inside: avoid;
     }
 
     .section-head {
+      border-bottom: 1px solid #eef2f7;
       margin-bottom: 14px;
       padding-bottom: 10px;
-      border-bottom: 1px solid var(--soft-line);
     }
 
     .section-head h2 {
@@ -405,108 +644,108 @@ export async function exportControlPDF(control: Control): Promise<void> {
       color: var(--muted);
     }
 
-    .programs-grid {
+    .stack {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .program-card,
+    .image-card,
+    .status-card,
+    .empty-state {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
     .program-card {
       border: 1px solid var(--line);
       border-radius: 14px;
-      overflow: hidden;
-      background: #fff;
-      page-break-inside: avoid;
       padding: 14px;
+      background: #fff;
+      overflow: hidden;
     }
 
-    .program-card--with-image {
+    .program-card-with-image {
       display: flex;
       flex-direction: row-reverse;
       align-items: center;
       gap: 14px;
     }
 
-    .program-card-info {
+    .program-main {
       flex: 1;
       min-width: 0;
     }
 
-    .program-card-title {
+    .program-title {
       font-size: 14px;
       font-weight: 800;
       color: #0f172a;
       margin-bottom: 4px;
+      word-break: break-word;
     }
 
-    .program-card-meta {
-      font-size: 11px;
-      color: var(--muted);
+    .program-meta {
       display: flex;
-      gap: 10px;
       flex-wrap: wrap;
-    }
-
-    .program-card-meta span {
+      gap: 10px;
+      font-size: 11px;
       color: #475569;
     }
 
-    .program-card-image {
-      flex-shrink: 0;
-      width: 160px;
-      height: 110px;
+    .program-image {
+      width: 140px;
+      height: 95px;
       border-radius: 10px;
       overflow: hidden;
-      border: 1px solid var(--soft-line);
+      border: 1px solid #edf2f7;
       background: #f8fafc;
+      flex-shrink: 0;
     }
 
-    .program-card-image img {
+    .program-image img {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: block;
     }
 
-    .img-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .img-card {
+    .image-card {
       border: 1px solid var(--line);
       border-radius: 16px;
       overflow: hidden;
       background: #fff;
-      page-break-inside: avoid;
     }
 
-    .img-card-header {
+    .image-card-header {
       padding: 10px 12px;
       background: #fbfcfd;
-      border-bottom: 1px solid var(--soft-line);
-    }
-
-    .img-index {
+      border-bottom: 1px solid #eef2f7;
       font-size: 12px;
       font-weight: 700;
       color: #475569;
     }
 
-    .image-frame {
+    .image-wrap {
       width: 100%;
-      background: #f8fafc;
       padding: 10px;
-      border-bottom: 1px solid var(--soft-line);
+      background: #f8fafc;
+      border-bottom: 1px solid #eef2f7;
     }
 
     .section-image {
       width: 100%;
-      max-height: 260px;
-      display: block;
+      max-height: 220px;
       object-fit: contain;
-      border-radius: 12px;
+      display: block;
+      border-radius: 10px;
       background: #fff;
     }
 
@@ -528,12 +767,12 @@ export async function exportControlPDF(control: Control): Promise<void> {
     }
 
     .note-title {
+      padding: 8px 10px;
       background: #f6f8fb;
-      color: #475569;
+      border-bottom: 1px solid #e8ecf3;
       font-size: 11px;
       font-weight: 800;
-      padding: 8px 10px;
-      border-bottom: 1px solid #e8ecf3;
+      color: #475569;
     }
 
     .note-content {
@@ -543,10 +782,12 @@ export async function exportControlPDF(control: Control): Promise<void> {
       line-height: 1.6;
       white-space: pre-wrap;
       word-break: break-word;
+      max-height: 110px;
+      overflow: hidden;
     }
 
-    .empty-state,
-    .status-box {
+    .status-card,
+    .empty-state {
       border: 1px dashed #cbd5e1;
       border-radius: 14px;
       padding: 18px;
@@ -555,18 +796,6 @@ export async function exportControlPDF(control: Control): Promise<void> {
       color: #64748b;
       font-size: 13px;
       font-weight: 600;
-    }
-
-    .empty-icon {
-      font-size: 22px;
-      margin-bottom: 6px;
-      color: #94a3b8;
-    }
-
-    .not-needed-box {
-      background: #fcfcfd;
-      border-style: solid;
-      color: #475569;
     }
 
     .status-dot {
@@ -579,110 +808,278 @@ export async function exportControlPDF(control: Control): Promise<void> {
       vertical-align: middle;
     }
 
-    .page-break {
-      page-break-before: always;
-    }
-
-    @media print {
-      .hero,
-      .section-card,
-      .img-card {
-        box-shadow: none;
-      }
+    .empty-state-text {
+      color: #64748b;
     }
   </style>
 </head>
 <body>
-  <div class="report">
-    <div class="hero">
-      <div class="hero-top">
-        <div class="title-wrap">
-          <h1 class="title">${escapeHtml(control.elementName)}</h1>
-          <div class="subtitle">דוח בקרת אלמנט</div>
-        </div>
-        <div class="type-badge">${escapeHtml(typeLabel)}</div>
-      </div>
-
-      <div class="info-grid">
-        ${renderInfoItem('מפלס', control.Level?.name)}
-        ${renderInfoItem('מיקום', control.elementLocation)}
-        ${renderInfoItem('סוג בטון', control.concreateType?.name)}
-        ${renderInfoItem('סוג אלמנט', typeLabel)}
-        ${(control.updatedAt ?? control.createdAt)
-          ? renderInfoItem('תאריך ושעה', formatDateTime(control.updatedAt ?? control.createdAt!))
-          : ''}
-      </div>
-    </div>
-
-    ${programsHtml}
-
-    <section class="section-card">
-      <div class="section-head">
-        <h2>בקרת ברזל</h2>
-        <div class="section-subtitle">תמונות והערות מהשטח</div>
-      </div>
-      ${ironHtml}
-    </section>
-
-    <section class="section-card">
-      <div class="section-head">
-        <h2>בקרת חשמל</h2>
-        <div class="section-subtitle">תמונות והערות מהשטח</div>
-      </div>
-      ${electricHtml}
-    </section>
-
-    <section class="section-card">
-      <div class="section-head">
-        <h2>בקרת אינסטלציה</h2>
-        <div class="section-subtitle">תמונות והערות מהשטח</div>
-      </div>
-      ${installationHtml}
-    </section>
-
-    <section class="section-card">
-      <div class="section-head">
-        <h2>בקרת מיזוג אוויר</h2>
-        <div class="section-subtitle">תמונות והערות מהשטח</div>
-      </div>
-      ${waterHtml}
-    </section>
-
-    <section class="section-card">
-      <div class="section-head">
-        <h2>בקרת שונות</h2>
-        <div class="section-subtitle">תמונות והערות מהשטח</div>
-      </div>
-      ${otherHtml}
-    </section>
-
-    <section class="section-card">
-      <div class="section-head">
-        <h2>יציקה</h2>
-        <div class="section-subtitle">תמונות והערות מהשטח</div>
-      </div>
-      ${concreteHtml}
-    </section>
-  </div>
+  ${pages}
 </body>
 </html>`;
+}
 
-  const { uri: tempUri } = await Print.printToFileAsync({ html });
+export async function exportControlPDF(control: Control): Promise<void> {
+  const runId = `pdf-export-${Date.now()}`;
+  const typeColor =
+    ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
+    DEFAULT_ELEMENT_TYPE_COLOR;
+
+  const typeLabel =
+    ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ??
+    String(control.elementType);
+
+  const headerTitle = `${control.elementName} - דוח בקרת אלמנט`;
+
+  const [
+    programCards,
+    ironCards,
+    electricCards,
+    installationCards,
+    waterCards,
+    otherCards,
+    concreteCards,
+  ] = await Promise.all([
+    programsToCards(control.programs),
+    imagesToCards(control.IronControlImages),
+    control.electricNeeded === false
+      ? Promise.resolve([renderStatusCard('לא נדרש עבור אלמנט זה')])
+      : imagesToCards(control.ElectricalControlImages),
+    control.installationNeeded === false
+      ? Promise.resolve([renderStatusCard('לא נדרש עבור אלמנט זה')])
+      : imagesToCards(control.InstallationControlImages),
+    control.waterNeeded === false
+      ? Promise.resolve([renderStatusCard('לא נדרש עבור אלמנט זה')])
+      : imagesToCards(control.WaterControlImages),
+    imagesToCards(control.otherControlImages),
+    imagesToCards(control.ConcreteControlImages),
+  ]);
+
+  const CARDS_PER_PAGE = 4;
+  const programChunks = programCards.length ? chunkArray(programCards, CARDS_PER_PAGE).length : 0;
+  const ironChunks = ironCards.length ? chunkArray(ironCards, CARDS_PER_PAGE).length : 0;
+  const electricChunks = electricCards.length ? chunkArray(electricCards, CARDS_PER_PAGE).length : 0;
+  const installationChunks = installationCards.length ? chunkArray(installationCards, CARDS_PER_PAGE).length : 0;
+  const waterChunks = waterCards.length ? chunkArray(waterCards, CARDS_PER_PAGE).length : 0;
+  const otherChunks = otherCards.length ? chunkArray(otherCards, CARDS_PER_PAGE).length : 0;
+  const concreteChunks = concreteCards.length ? chunkArray(concreteCards, CARDS_PER_PAGE).length : 0;
+
+  const totalPages =
+    1 +
+    programChunks +
+    ironChunks +
+    electricChunks +
+    installationChunks +
+    waterChunks +
+    otherChunks +
+    concreteChunks;
+
+  let pageIndex = 1;
+
+  const heroPage = renderPage({
+    headerTitle,
+    body: `
+      <div class="hero">
+        <div class="hero-top">
+          <div class="title-wrap">
+            <h1 class="title">${escapeHtml(control.elementName)}</h1>
+            <div class="subtitle">דוח בקרת אלמנט</div>
+          </div>
+          <div class="type-badge">${escapeHtml(typeLabel)}</div>
+        </div>
+
+        <div class="info-grid">
+          ${renderInfoItem('מפלס', control.Level?.name)}
+          ${renderInfoItem('מיקום', control.elementLocation)}
+          ${renderInfoItem('סוג בטון', control.concreateType?.name)}
+          ${renderInfoItem('סוג אלמנט', typeLabel)}
+          ${(control.updatedAt ?? control.createdAt)
+            ? renderInfoItem(
+                'תאריך ושעה',
+                formatDateTime(control.updatedAt ?? control.createdAt!)
+              )
+            : ''}
+        </div>
+      </div>
+    `,
+    pageNumber: 1,
+    totalPages,
+  });
+  pageIndex += 1;
+
+  const pages = [
+    heroPage,
+    renderProgramsPages({
+      headerTitle,
+      cards: programCards,
+      runId,
+      startPageIndex: pageIndex,
+      totalPages,
+    }),
+    (() => {
+      pageIndex += programChunks;
+      return renderImagePages({
+        headerTitle,
+        title: 'בקרת ברזל',
+        subtitle: 'תמונות והערות מהשטח',
+        cards: ironCards,
+        runId,
+        startPageIndex: pageIndex,
+        totalPages,
+      });
+    })(),
+    (() => {
+      pageIndex += ironChunks;
+      return renderImagePages({
+        headerTitle,
+        title: 'בקרת חשמל',
+        subtitle: 'תמונות והערות מהשטח',
+        cards: electricCards,
+        runId,
+        startPageIndex: pageIndex,
+        totalPages,
+      });
+    })(),
+    (() => {
+      pageIndex += electricChunks;
+      return renderImagePages({
+        headerTitle,
+        title: 'בקרת אינסטלציה',
+        subtitle: 'תמונות והערות מהשטח',
+        cards: installationCards,
+        runId,
+        startPageIndex: pageIndex,
+        totalPages,
+      });
+    })(),
+    (() => {
+      pageIndex += installationChunks;
+      return renderImagePages({
+        headerTitle,
+        title: 'בקרת מיזוג אוויר',
+        subtitle: 'תמונות והערות מהשטח',
+        cards: waterCards,
+        runId,
+        startPageIndex: pageIndex,
+        totalPages,
+      });
+    })(),
+    (() => {
+      pageIndex += waterChunks;
+      return renderImagePages({
+        headerTitle,
+        title: 'בקרת שונות',
+        subtitle: 'תמונות והערות מהשטח',
+        cards: otherCards,
+        runId,
+        startPageIndex: pageIndex,
+        totalPages,
+      });
+    })(),
+    (() => {
+      pageIndex += otherChunks;
+      return renderImagePages({
+        headerTitle,
+        title: 'יציקה',
+        subtitle: 'תמונות והערות מהשטח',
+        cards: concreteCards,
+        runId,
+        startPageIndex: pageIndex,
+        totalPages,
+      });
+    })(),
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const html = buildHtmlDocument(pages, typeColor);
+
+  // #region agent log
+  debugPdfLog({
+    runId,
+    hypothesisId: 'H_RENDERED_PAGE_COUNT',
+    location: 'utils/exportControlPDF.ts:exportControlPDF:html',
+    message: 'PDF HTML assembled',
+    data: {
+      elementName: control.elementName,
+      programCards: programCards.length,
+      ironCards: ironCards.length,
+      electricCards: electricCards.length,
+      installationCards: installationCards.length,
+      waterCards: waterCards.length,
+      otherCards: otherCards.length,
+      concreteCards: concreteCards.length,
+      renderedPageCount: (pages.match(/class="pdf-page"/g) ?? []).length,
+      renderedSectionCount: (pages.match(/class="section-card"/g) ?? []).length,
+      hasPageBreakBeforeRule: html.includes('.pdf-page + .pdf-page') && html.includes('page-break-before: always'),
+      hasFixedPageHeight: html.includes(`height: ${A4_HEIGHT}pt;`),
+      hasSectionCardFullHeight: html.includes('.section-card') && html.includes('height: 100%;'),
+      hasBreakInsideAvoid: html.includes('break-inside: avoid'),
+    },
+  });
+  // #endregion
+
+  // #region agent log
+  debugPdfLog({
+    runId,
+    hypothesisId: 'H_PRINT_CONFIG',
+    location: 'utils/exportControlPDF.ts:exportControlPDF:printConfig',
+    message: 'Print config prepared',
+    data: {
+      printWidth: A4_WIDTH,
+      printHeight: A4_HEIGHT,
+      htmlLength: html.length,
+      usesAtPageSizeRule: html.includes('@page'),
+      usesExplicitPrintDimensions: true,
+    },
+  });
+  // #endregion
+
+  const { uri: tempUri } = await Print.printToFileAsync({
+    html,
+    width: A4_WIDTH,
+    height: A4_HEIGHT,
+  });
+
+  // #region agent log
+  debugPdfLog({
+    runId,
+    hypothesisId: 'H_PRINT_RESULT',
+    location: 'utils/exportControlPDF.ts:exportControlPDF:printResult',
+    message: 'Print completed',
+    data: {
+      tempUri,
+      generatedFile: Boolean(tempUri),
+    },
+  });
+  // #endregion
 
   const elementName = sanitizeFilenamePart(control.elementName);
   const level = sanitizeFilenamePart(control.Level?.name);
   const location = sanitizeFilenamePart(control.elementLocation);
   const elementType = sanitizeFilenamePart(typeLabel);
-  const dateStr = (control.updatedAt ?? control.createdAt)
+  const dateStr = control.updatedAt ?? control.createdAt
     ? new Date(control.updatedAt ?? control.createdAt!).toISOString().slice(0, 10)
     : new Date().toISOString().slice(0, 10);
+
   const parts = [elementName, level, location, elementType, dateStr].filter(Boolean);
-  const customFilename = (parts.length > 0 ? parts.join('_') : 'control_report') + '.pdf';
+  const customFilename = `${parts.length ? parts.join('_') : 'control_report'}.pdf`;
 
   let shareUri = tempUri;
   const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-  if (cacheDir && customFilename) {
+
+  if (cacheDir) {
     const destUri = `${cacheDir}${customFilename}`;
+
+    try {
+      const existing = await FileSystem.getInfoAsync(destUri);
+      if (existing.exists) {
+        await FileSystem.deleteAsync(destUri, { idempotent: true });
+      }
+    } catch (e) {
+      console.warn('[exportControlPDF] failed to clear existing file:', e);
+    }
+
     await FileSystem.copyAsync({ from: tempUri, to: destUri });
     shareUri = destUri;
   }

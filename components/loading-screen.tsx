@@ -28,7 +28,7 @@ export function LoadingScreen() {
   const footerOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.sequence([
+    const sequence = Animated.sequence([
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -74,16 +74,24 @@ export function LoadingScreen() {
         duration: 600,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
 
-    Animated.loop(
+    const shimmerLoop = Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 1,
         duration: 2400,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
       }),
-    ).start();
+    );
+
+    sequence.start();
+    shimmerLoop.start();
+
+    return () => {
+      sequence.stop();
+      shimmerLoop.stop();
+    };
   }, [fadeAnim, scaleAnim, logoScale, logoOpacity, textSlide, textOpacity, shimmerAnim, footerOpacity]);
 
   const isDark = colorScheme === 'dark';

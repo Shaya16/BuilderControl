@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -170,6 +171,7 @@ export default function LevelsScreen() {
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setModalVisible(false)} />
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
               {editingLevel ? 'ערוך מפלס' : 'הוסף מפלס'}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -41,30 +41,53 @@ type Props = {
   onEdit: () => void;
 };
 
+const EXPORT_TIMEOUT_MS = 60_000;
+
 export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
   const [exporting, setExporting] = useState(false);
   const insets = useSafeAreaInsets();
 
-  if (!control) return null;
+  // Keep the last non-null control so the modal can animate out without
+  // snapping to blank when the caller sets control=null on the same tick
+  // as visible=false.
+  const lastControlRef = useRef<Control | null>(null);
+  if (control) lastControlRef.current = control;
+  const displayControl = control ?? lastControlRef.current;
+
+  if (!displayControl) return null;
 
   const handleExport = async () => {
     setExporting(true);
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     try {
-      await exportControlPDF(control);
-    } catch {
-      Alert.alert('Export failed', 'Could not generate the PDF. Please try again.');
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('export_timeout')),
+          EXPORT_TIMEOUT_MS,
+        );
+      });
+      await Promise.race([exportControlPDF(displayControl), timeoutPromise]);
+    } catch (err: unknown) {
+      const isTimeout = err instanceof Error && err.message === 'export_timeout';
+      Alert.alert(
+        isTimeout ? 'Export timed out' : 'Export failed',
+        isTimeout
+          ? 'PDF generation took too long. Please try again.'
+          : 'Could not generate the PDF. Please try again.',
+      );
     } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
       setExporting(false);
     }
   };
 
   const typeColor =
-    ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
+    ELEMENT_TYPE_COLORS[displayControl.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
     DEFAULT_ELEMENT_TYPE_COLOR;
 
   const typeLabel =
-    ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ??
-    control.elementType;
+    ELEMENT_TYPE_LABELS[displayControl.elementType as keyof typeof ELEMENT_TYPE_LABELS] ??
+    displayControl.elementType;
 
   return (
     <Modal
@@ -80,7 +103,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
         <View style={[viewStyles.header, { borderLeftColor: typeColor }]}>
           <View style={viewStyles.headerTop}>
             <Text style={viewStyles.elementName} numberOfLines={1}>
-              {control.elementName}
+              {displayControl.elementName}
             </Text>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7} hitSlop={12}>
               <IconSymbol name="xmark" size={16} color="#888" />
@@ -93,26 +116,26 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
             </View>
             <View style={viewStyles.chip}>
               <IconSymbol name="square.2.layers.3d.fill" size={11} color="#888" />
-              <Text style={viewStyles.chipText}>{control.Level.name}</Text>
+              <Text style={viewStyles.chipText}>{displayControl.Level.name}</Text>
             </View>
-            {!!control.elementLocation && (
+            {!!displayControl.elementLocation && (
               <View style={viewStyles.chip}>
                 <IconSymbol name="mappin" size={11} color="#888" />
                 <Text style={viewStyles.chipLabel}>מיקום:</Text>
-                <Text style={viewStyles.chipText}>{control.elementLocation}</Text>
+                <Text style={viewStyles.chipText}>{displayControl.elementLocation}</Text>
               </View>
             )}
-            {!!(control.createdAt || control.updatedAt) && (
+            {!!(displayControl.createdAt || displayControl.updatedAt) && (
               <View style={viewStyles.chip}>
                 <IconSymbol name="clock" size={11} color="#888" />
                 <Text style={viewStyles.chipText}>
-                  {formatDate(control.updatedAt ?? control.createdAt!)}
+                  {formatDate(displayControl.updatedAt ?? displayControl.createdAt!)}
                 </Text>
               </View>
             )}
             <View style={viewStyles.concreteBadge}>
               <Text style={viewStyles.concreteBadgeLabel}>בטון:</Text>
-              <Text style={viewStyles.concreteBadgeText}>{control.concreateType?.name}</Text>
+              <Text style={viewStyles.concreteBadgeText}>{displayControl.concreateType?.name}</Text>
             </View>
           </View>
         </View>
@@ -123,9 +146,9 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
           showsVerticalScrollIndicator={false}>
 
           {/* ── Programs ── */}
-          {control.programs.length > 0 && (
+          {displayControl.programs.length > 0 && (
             <Section title="תוכניות">
-              {control.programs.map((p) => (
+              {displayControl.programs.map((p) => (
                 <View key={p.id} style={viewStyles.programCard}>
                   <View style={viewStyles.programRow}>
                     <View style={viewStyles.programNameWrap}>
@@ -156,25 +179,25 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
           {/* ── Iron Control ── */}
           <Section
             title="בקרת ברזל"
-            count={control.IronControlImages?.length}>
-            <ImageList images={control.IronControlImages} />
+            count={displayControl.IronControlImages?.length}>
+            <ImageList images={displayControl.IronControlImages} />
           </Section>
 
           {/* ── Electric Control ── */}
           <Section
             title="בקרת חשמל"
             badge={
-              control.electricNeeded === false
+              displayControl.electricNeeded === false
                 ? { label: 'לא נדרש', color: '#999' }
                 : undefined
             }
-            count={control.electricNeeded !== false ? control.ElectricalControlImages?.length : undefined}>
-            {control.electricNeeded === false ? (
+            count={displayControl.electricNeeded !== false ? displayControl.ElectricalControlImages?.length : undefined}>
+            {displayControl.electricNeeded === false ? (
               <View style={viewStyles.emptyHintWrap}>
                 <Text style={viewStyles.emptyHint}>לא נדרש עבור אלמנט זה.</Text>
               </View>
             ) : (
-              <ImageList images={control.ElectricalControlImages} />
+              <ImageList images={displayControl.ElectricalControlImages} />
             )}
           </Section>
 
@@ -182,17 +205,17 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
           <Section
             title="בקרת אינסטלציה"
             badge={
-              control.installationNeeded === false
+              displayControl.installationNeeded === false
                 ? { label: 'לא נדרש', color: '#999' }
                 : undefined
             }
-            count={control.installationNeeded !== false ? control.InstallationControlImages?.length : undefined}>
-            {control.installationNeeded === false ? (
+            count={displayControl.installationNeeded !== false ? displayControl.InstallationControlImages?.length : undefined}>
+            {displayControl.installationNeeded === false ? (
               <View style={viewStyles.emptyHintWrap}>
                 <Text style={viewStyles.emptyHint}>לא נדרש עבור אלמנט זה.</Text>
               </View>
             ) : (
-              <ImageList images={control.InstallationControlImages} />
+              <ImageList images={displayControl.InstallationControlImages} />
             )}
           </Section>
 
@@ -200,32 +223,32 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
           <Section
             title="בקרת מיזוג אוויר"
             badge={
-              control.waterNeeded === false
+              displayControl.waterNeeded === false
                 ? { label: 'לא נדרש', color: '#999' }
                 : undefined
             }
-            count={control.waterNeeded !== false ? control.WaterControlImages?.length : undefined}>
-            {control.waterNeeded === false ? (
+            count={displayControl.waterNeeded !== false ? displayControl.WaterControlImages?.length : undefined}>
+            {displayControl.waterNeeded === false ? (
               <View style={viewStyles.emptyHintWrap}>
                 <Text style={viewStyles.emptyHint}>לא נדרש עבור אלמנט זה.</Text>
               </View>
             ) : (
-              <ImageList images={control.WaterControlImages} />
+              <ImageList images={displayControl.WaterControlImages} />
             )}
           </Section>
 
           {/* ── Other Control ── */}
           <Section
             title="בקרת שונות"
-            count={control.otherControlImages?.length}>
-            <ImageList images={control.otherControlImages} />
+            count={displayControl.otherControlImages?.length}>
+            <ImageList images={displayControl.otherControlImages} />
           </Section>
 
           {/* ── Concrete Control ── */}
           <Section
             title="בקרת יציקה"
-            count={control.ConcreteControlImages?.length}>
-            <ImageList images={control.ConcreteControlImages} />
+            count={displayControl.ConcreteControlImages?.length}>
+            <ImageList images={displayControl.ConcreteControlImages} />
           </Section>
 
         </ScrollView>

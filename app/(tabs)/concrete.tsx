@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -160,6 +161,7 @@ export default function ConcreteScreen() {
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setModalVisible(false)} />
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
               {editingConcreteType ? 'ערוך סוג בטון' : 'הוסף סוג בטון'}
