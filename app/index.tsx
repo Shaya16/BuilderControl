@@ -20,8 +20,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { Project } from '@/types/project';
 
-const ACCENT = '#0a7ea4';
-const STORAGE_KEY = 'projects';
+import { ACCENT, STORAGE_KEY } from '@/constants/controls';
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -61,65 +60,173 @@ export default function ProjectsScreen() {
   return (
     <>
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+        headerBackgroundColor={{ light: '#FFD4B7', dark: '#FFB380' }}
         headerImage={
           <IconSymbol
-            size={310}
-            color="#808080"
+            size={220}
+            color={colorScheme === 'dark' ? '#1E3A45' : '#FF6A06'}
             name="folder.fill"
             style={styles.headerImage}
           />
         }>
-
-        {/* Title row */}
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title" style={{ fontFamily: Fonts?.rounded }}>
-            Projects
-          </ThemedText>
-          {projects.length > 0 && (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddProject}
-              activeOpacity={0.8}>
-              <IconSymbol name="plus" size={18} color="#fff" />
-            </TouchableOpacity>
+        <ThemedView style={styles.content}>
+          {/* Hero */}
+          <ThemedView style={styles.hero}>
+            <View style={styles.heroText}>
+              <ThemedText type="title" style={styles.heroTitle}>
+                הפרויקטים שלי
+              </ThemedText>
+              <ThemedText
+                style={[
+                  styles.heroSubtitle,
+                  { color: Colors[colorScheme].icon },
+                ]}>
+                {projects.length === 0
+                  ? 'אפשר להתחיל ביצירת הפרויקט הראשון שלך'
+                  : `${projects.length} פרויקטים שמורים`}
+              </ThemedText>
+            </View>
+  
+            {projects.length > 0 && (
+              <View
+                style={[
+                  styles.countBadge,
+                  {
+                    backgroundColor:
+                      colorScheme === 'dark'
+                        ? 'rgba(255,106,6,0.18)'
+                        : 'rgba(255,106,6,0.10)',
+                  },
+                ]}>
+                <Text style={styles.countBadgeText}>{projects.length}</Text>
+              </View>
+            )}
+          </ThemedView>
+  
+          {/* Empty state */}
+          {projects.length === 0 ? (
+            <ThemedView
+              style={[
+                styles.emptyCard,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                  borderColor:
+                    colorScheme === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(17,24,28,0.08)',
+                },
+              ]}>
+              <View
+                style={[
+                  styles.emptyIconWrap,
+                  {
+                    backgroundColor:
+                      colorScheme === 'dark'
+                        ? 'rgba(255,106,6,0.18)'
+                        : 'rgba(255,106,6,0.10)',
+                  },
+                ]}>
+                <IconSymbol name="folder.fill" size={38} color={ACCENT} />
+              </View>
+  
+              <ThemedText style={styles.emptyTitle}>אין פרויקטים עדיין</ThemedText>
+              <ThemedText
+                style={[
+                  styles.emptySubtitle,
+                  { color: Colors[colorScheme].icon },
+                ]}>
+                צור פרויקט חדש כדי להתחיל לנהל תוכניות, בקרות ורמות
+              </ThemedText>
+  
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleAddProject}
+                activeOpacity={0.85}>
+                <IconSymbol name="plus" size={18} color="#fff" />
+                <Text style={styles.primaryButtonText}>פרויקט חדש</Text>
+              </TouchableOpacity>
+            </ThemedView>
+          ) : (
+            <ThemedView style={styles.listContainer}>
+              {projects.map((project) => (
+                <TouchableOpacity
+                  key={project.id}
+                  onPress={() => handleSelectProject(project)}
+                  activeOpacity={0.82}>
+                  <ThemedView
+                    style={[
+                      styles.projectCard,
+                      {
+                        backgroundColor:
+                          colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                        borderColor:
+                          colorScheme === 'dark'
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'rgba(17,24,28,0.08)',
+                      },
+                    ]}>
+                    <View style={styles.projectMain}>
+                      <View
+                        style={[
+                          styles.folderIconWrap,
+                          {
+                            backgroundColor:
+                              colorScheme === 'dark'
+                                ? 'rgba(255,106,6,0.18)'
+                                : 'rgba(255,106,6,0.10)',
+                          },
+                        ]}>
+                        <IconSymbol name="folder.fill" size={20} color={ACCENT} />
+                      </View>
+  
+                      <View style={styles.projectTextWrap}>
+                        <ThemedText style={styles.projectName} numberOfLines={1}>
+                          {project.name}
+                        </ThemedText>
+                        <Text
+                          style={[
+                            styles.projectMeta,
+                            { color: Colors[colorScheme].icon },
+                          ]}>
+                          לחץ לפתיחת הפרויקט
+                        </Text>
+                      </View>
+                    </View>
+  
+                    <View
+                      style={[
+                        styles.chevronWrap,
+                        {
+                          backgroundColor:
+                            colorScheme === 'dark'
+                              ? 'rgba(255,255,255,0.05)'
+                              : '#F4F7F8',
+                        },
+                      ]}>
+                      <IconSymbol
+                        name="chevron.left"
+                        size={16}
+                        color={Colors[colorScheme].icon}
+                      />
+                    </View>
+                  </ThemedView>
+                </TouchableOpacity>
+              ))}
+            </ThemedView>
           )}
         </ThemedView>
-
-        {/* Empty state */}
-        {projects.length === 0 ? (
-          <ThemedView style={styles.emptyContainer}>
-            <IconSymbol name="folder" size={64} color={Colors[colorScheme].icon} />
-            <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
-              No projects yet
-            </ThemedText>
-            <TouchableOpacity
-              style={styles.bigAddButton}
-              onPress={handleAddProject}
-              activeOpacity={0.8}>
-              <IconSymbol name="plus" size={24} color="#fff" />
-              <Text style={styles.bigAddButtonText}>Add Project</Text>
-            </TouchableOpacity>
-          </ThemedView>
-        ) : (
-          /* Projects list */
-          <ThemedView style={styles.listContainer}>
-            {projects.map((project) => (
-              <TouchableOpacity
-                key={project.id}
-                onPress={() => handleSelectProject(project)}
-                activeOpacity={0.7}>
-                <ThemedView style={styles.projectCard}>
-                  <IconSymbol name="folder.fill" size={20} color={ACCENT} />
-                  <ThemedText style={styles.projectName}>{project.name}</ThemedText>
-                  <IconSymbol name="chevron.right" size={16} color={Colors[colorScheme].icon} />
-                </ThemedView>
-              </TouchableOpacity>
-            ))}
-          </ThemedView>
-        )}
       </ParallaxScrollView>
-
+  
+      {/* Floating add button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={handleAddProject}
+        activeOpacity={0.9}>
+        <IconSymbol name="plus" size={20} color="#fff" />
+        <Text style={styles.fabText}>פרויקט חדש</Text>
+      </TouchableOpacity>
+  
       {/* Add Project Modal */}
       <Modal
         visible={modalVisible}
@@ -129,11 +236,44 @@ export default function ProjectsScreen() {
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>New Project</Text>
+          <View
+            style={[
+              styles.modalBox,
+              {
+                backgroundColor:
+                  colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+              },
+            ]}>
+            <Text
+              style={[
+                styles.modalTitle,
+                { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+              ]}>
+              פרויקט חדש
+            </Text>
+  
+            <Text
+              style={[
+                styles.modalSubtitle,
+                { color: Colors[colorScheme].icon },
+              ]}>
+              תן לפרויקט שם ברור שיהיה קל לזהות אחר כך
+            </Text>
+  
             <TextInput
-              style={styles.modalInput}
-              placeholder="Project name"
+              style={[
+                styles.modalInput,
+                {
+                  color: colorScheme === 'dark' ? '#fff' : '#11181C',
+                  borderColor:
+                    colorScheme === 'dark'
+                      ? 'rgba(255,255,255,0.10)'
+                      : '#D9E0E3',
+                  backgroundColor:
+                    colorScheme === 'dark' ? '#0B1114' : '#F8FAFB',
+                },
+              ]}
+              placeholder="שם הפרויקט"
               placeholderTextColor="#999"
               value={newName}
               onChangeText={setNewName}
@@ -141,19 +281,40 @@ export default function ProjectsScreen() {
               onSubmitEditing={handleConfirm}
               returnKeyType="done"
             />
+  
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[
+                  styles.cancelButton,
+                  {
+                    borderColor:
+                      colorScheme === 'dark'
+                        ? 'rgba(255,255,255,0.10)'
+                        : '#D9E0E3',
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#0B1114' : '#fff',
+                  },
+                ]}
                 onPress={() => setModalVisible(false)}
-                activeOpacity={0.7}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.cancelButtonText,
+                    { color: Colors[colorScheme].icon },
+                  ]}>
+                  ביטול
+                </Text>
               </TouchableOpacity>
+  
               <TouchableOpacity
-                style={[styles.confirmButton, !newName.trim() && styles.confirmButtonDisabled]}
+                style={[
+                  styles.confirmButton,
+                  !newName.trim() && styles.confirmButtonDisabled,
+                ]}
                 onPress={handleConfirm}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
                 disabled={!newName.trim()}>
-                <Text style={styles.confirmButtonText}>Create</Text>
+                <Text style={styles.confirmButtonText}>יצירה</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -162,121 +323,262 @@ export default function ProjectsScreen() {
     </>
   );
 }
-
 const styles = StyleSheet.create({
   headerImage: {
-    color: '#808080',
-    bottom: -120,
-    left: -35,
+    bottom: -70,
+    left: -10,
     position: 'absolute',
+    opacity: 0.95,
   },
-  titleContainer: {
+
+  content: {
+    paddingBottom: 110,
+    gap: 18,
+  },
+
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 4,
+  },
+  heroText: {
+
+    alignItems: 'flex-start',
+  },
+  heroTitle: {
+    fontFamily: Fonts?.rounded,
+    fontSize: 30,
+    lineHeight: 36,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  heroSubtitle: {
+    marginTop: 6,
+    fontSize: 15,
+    lineHeight: 22,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+
+  countBadge: {
+    minWidth: 42,
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBadgeText: {
+    color: ACCENT,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+
+  emptyCard: {
+    marginTop: 8,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+    alignItems: 'center',
+  },
+  emptyIconWrap: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    marginTop: 8,
+    fontSize: 15,
+    lineHeight: 22,
+    writingDirection: 'rtl',
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+
+  primaryButton: {
+    marginTop: 22,
+    minHeight: 52,
+    borderRadius: 16,
+    backgroundColor: ACCENT,
+    paddingHorizontal: 22,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+
+  listContainer: {
+    gap: 12,
+    marginTop: 4,
+  },
+  projectCard: {
+    minHeight: 84,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 16,
-  },
-  bigAddButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    backgroundColor: ACCENT,
-    marginTop: 8,
-  },
-  bigAddButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  listContainer: {
-    gap: 10,
-  },
-  projectCard: {
+  projectMain: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    minWidth: 0,
+  },
+  folderIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  projectTextWrap: {
+    alignItems: 'flex-start',
+    minWidth: 0,
   },
   projectName: {
-    flex: 1,
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
-  // Modal
+  projectMeta: {
+    marginTop: 4,
+    fontSize: 13,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  chevronWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 28,
+    height: 56,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: ACCENT,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  fabText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
   },
   modalBox: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    gap: 16,
+    borderRadius: 24,
+    padding: 22,
+    gap: 14,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#11181C',
+    fontSize: 22,
+    fontWeight: '800',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginTop: -4,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#11181C',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginTop: 4,
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     gap: 10,
+    marginTop: 6,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    minHeight: 50,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#ddd',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    fontWeight: '600',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   confirmButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    minHeight: 50,
+    borderRadius: 14,
     backgroundColor: ACCENT,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   confirmButtonDisabled: {
-    opacity: 0.4,
+    opacity: 0.45,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#fff',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
 });

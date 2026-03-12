@@ -1,28 +1,29 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { router, useGlobalSearchParams } from 'expo-router';
+import { useGlobalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from 'react-native';
 
 import ConcreteIcon from '@/assets/icons/concrete.svg';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { ConcreteType, Project } from '@/types/project';
 
-const ACCENT = '#0a7ea4';
+import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
 export default function ConcreteScreen() {
@@ -102,54 +103,32 @@ export default function ConcreteScreen() {
   return (
     <>
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+        headerBackgroundColor={{ light: '#FE9F39', dark: '#1D3D47' }}
         headerImage={
           <ConcreteIcon width={220} height={220} fill="white" />
         }>
 
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace('/')}
-          activeOpacity={0.7}>
-          <IconSymbol name="chevron.left" size={18} color={ACCENT} />
-          <Text style={[styles.backButtonText, { color: ACCENT }]}>Back to Projects</Text>
-        </TouchableOpacity>
-
-        {/* Title row */}
-        <ThemedView style={styles.titleContainer}>
-          <ThemedView>
-            <ThemedText type="title" style={{ fontFamily: Fonts?.rounded }}>
-              Concrete
-            </ThemedText>
-            {project && (
-              <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 14 }}>
-                {project.name}
-              </ThemedText>
-            )}
-          </ThemedView>
-          {concreteTypes.length > 0 && (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddConcrete}
-              activeOpacity={0.8}>
-              <IconSymbol name="plus" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </ThemedView>
+        <TabHeader
+          backLabel="חזרה לפרוייקטים"
+          title="בטון"
+          projectName={project?.name}
+          showAddButton={concreteTypes.length > 0}
+          onAddPress={handleAddConcrete}
+        />
 
         {/* Empty state */}
         {concreteTypes.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <IconSymbol name="square.3.layers.3d" size={64} color={Colors[colorScheme].icon} />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
-              No concrete types yet
+              אין סוגי בטון עדיין
             </ThemedText>
             <TouchableOpacity
               style={styles.bigAddButton}
               onPress={handleAddConcrete}
               activeOpacity={0.8}>
               <IconSymbol name="plus" size={24} color="#fff" />
-              <Text style={styles.bigAddButtonText}>Add Concrete Type</Text>
+              <Text style={styles.bigAddButtonText}>הוסף סוג בטון</Text>
             </TouchableOpacity>
           </ThemedView>
         ) : (
@@ -164,7 +143,7 @@ export default function ConcreteScreen() {
                   <ThemedView style={styles.concreteTypeCardContent}>
                     <ThemedText style={styles.concreteTypeName}>{concreteType.name}</ThemedText>
                   </ThemedView>
-                  <IconSymbol name="chevron.right" size={16} color={Colors[colorScheme].icon} />
+                  <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
                 </ThemedView>
               </TouchableOpacity>
             ))}
@@ -183,11 +162,11 @@ export default function ConcreteScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
-              {editingConcreteType ? 'Edit Concrete Type' : 'New Concrete Type'}
+              {editingConcreteType ? 'ערוך סוג בטון' : 'הוסף סוג בטון'}
             </Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Name"
+              placeholder="שם"
               placeholderTextColor="#999"
               value={newName}
               onChangeText={setNewName}
@@ -200,7 +179,7 @@ export default function ConcreteScreen() {
                 style={styles.cancelButton}
                 onPress={() => setModalVisible(false)}
                 activeOpacity={0.7}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>ביטול</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmButton, !newName.trim() && styles.confirmButtonDisabled]}
@@ -208,7 +187,7 @@ export default function ConcreteScreen() {
                 activeOpacity={0.8}
                 disabled={!newName.trim()}>
                 <Text style={styles.confirmButtonText}>
-                  {editingConcreteType ? 'Save' : 'Add'}
+                  {editingConcreteType ? 'שמור' : 'הוסף'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -220,7 +199,7 @@ export default function ConcreteScreen() {
                   onPress={handleDelete}
                   activeOpacity={0.8}>
                   <IconSymbol name="trash" size={16} color="#fff" />
-                  <Text style={styles.deleteButtonText}>Delete Concrete Type</Text>
+                  <Text style={styles.deleteButtonText}>מחק סוג בטון</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -232,36 +211,11 @@ export default function ConcreteScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
   headerImage: {
     color: '#808080',
     bottom: -120,
     left: -35,
     position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -290,6 +244,7 @@ const styles = StyleSheet.create({
   concreteTypeCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
     padding: 16,
     borderRadius: 12,
@@ -297,10 +252,12 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   concreteTypeCardContent: {
-    flex: 1,
+    
     gap: 4,
   },
   concreteTypeName: {
+    writingDirection: 'rtl',
+    textAlign: 'right',
     fontSize: 16,
     fontWeight: '600',
   },

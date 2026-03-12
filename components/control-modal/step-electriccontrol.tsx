@@ -22,9 +22,9 @@ export function StepElectricControl({
   onChangeNeeded,
 }: Props) {
   const pickImage = () => {
-    Alert.alert('Add Image', 'Choose source', [
+    Alert.alert('הוסף תמונה', 'בחר מקור', [
       {
-        text: 'Camera',
+        text: 'מצלמה',
         onPress: async () => {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
           if (status !== 'granted') return;
@@ -33,12 +33,12 @@ export function StepElectricControl({
             quality: 0.8,
           });
           if (!result.canceled) {
-            onChangeImages([...images, { uri: result.assets[0].uri, description: '' }]);
+            onChangeImages([{ uri: result.assets[0].uri, description: '' }, ...images]);
           }
         },
       },
       {
-        text: 'Gallery',
+        text: 'גלריה',
         onPress: async () => {
           const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (status !== 'granted') return;
@@ -49,13 +49,13 @@ export function StepElectricControl({
           });
           if (!result.canceled) {
             onChangeImages([
-              ...images,
               ...result.assets.map((a) => ({ uri: a.uri, description: '' })),
+              ...images,
             ]);
           }
         },
       },
-      { text: 'Cancel', style: 'cancel' },
+      { text: 'ביטול', style: 'cancel' },
     ]);
   };
 
@@ -76,15 +76,18 @@ export function StepElectricControl({
         <View style={[styles.checkbox, !needed && styles.checkboxChecked]}>
           {!needed && <IconSymbol name="checkmark" size={12} color="#fff" />}
         </View>
-        <Text style={localStyles.notNeededText}>Not needed for this element</Text>
+        <Text style={localStyles.notNeededText}>לא נדרש עבור אלמנט זה</Text>
       </TouchableOpacity>
 
       {needed ? (
         <>
           <Text style={styles.fieldLabel}>
-            Electric Control Images{images.length > 0 ? `  ·  ${images.length}` : ''}
+            תמונות בקרת חשמל{images.length > 0 ? `  ·  ${images.length}` : ''}
           </Text>
-
+          <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
+            <IconSymbol name="plus" size={18} color={ACCENT} />
+            <Text style={localStyles.addBtnText}>הוסף תמונה</Text>
+          </TouchableOpacity>
           {images.map((img, index) => (
             <View key={`${img.uri}-${index}`} style={localStyles.imageCard}>
               <Image source={{ uri: img.uri }} style={localStyles.imageThumb} resizeMode="cover" />
@@ -92,7 +95,7 @@ export function StepElectricControl({
                 style={[styles.input, localStyles.descInput]}
                 value={img.description}
                 onChangeText={(text) => updateDescription(index, text)}
-                placeholder="Description..."
+                placeholder="תיאור..."
                 placeholderTextColor="#aaa"
                 multiline
                 textAlignVertical="top"
@@ -106,13 +109,10 @@ export function StepElectricControl({
             </View>
           ))}
 
-          <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
-            <IconSymbol name="plus" size={18} color={ACCENT} />
-            <Text style={localStyles.addBtnText}>Add Image</Text>
-          </TouchableOpacity>
+          
         </>
       ) : (
-        <Text style={styles.emptyHint}>Electric control is not needed for this element.</Text>
+        <Text style={styles.emptyHint}>בקרת חשמל לא נדרשת עבור אלמנט זה.</Text>
       )}
     </View>
   );

@@ -1,4 +1,5 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT } from '@/constants/controls';
@@ -13,16 +14,34 @@ type Props = {
 };
 
 export function StepPrograms({ latestPrograms, selectedIds, onToggle }: Props) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const filteredPrograms = latestPrograms.filter((program) =>
+    program.number.toLowerCase().includes(searchQuery.trim().toLowerCase())
+  );
+
   return (
     <View style={styles.stepBody}>
+      <TextInput
+        style={[styles.input, { backgroundColor: '#fafafa' }]}
+        placeholder="חפש לפי מס׳..."
+        placeholderTextColor="#999"
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
       <Text style={styles.fieldLabel}>
-        Latest Programs{selectedIds.length > 0 ? `  ·  ${selectedIds.length} selected` : ''}
+        תוכניות אחרונות{selectedIds.length > 0 ? `  ·  ${selectedIds.length} נבחרו` : ''}
       </Text>
-      {latestPrograms.length === 0 ? (
-        <Text style={styles.emptyHint}>No latest programs in this project yet</Text>
+      {filteredPrograms.length === 0 ? (
+        <Text style={styles.emptyHint}>
+          {latestPrograms.length === 0
+            ? 'אין תוכניות בפרוייקט זה'
+            : 'אין תוכניות שמתאימות לחיפוש'}
+        </Text>
       ) : (
         <View style={styles.programList}>
-          {latestPrograms.map((program) => {
+          {filteredPrograms.map((program) => {
             const selected = selectedIds.includes(program.id);
             return (
               <TouchableOpacity
@@ -38,7 +57,7 @@ export function StepPrograms({ latestPrograms, selectedIds, onToggle }: Props) {
                     {program.name}
                   </Text>
                   <Text style={styles.programRowMeta}>
-                    No. {program.number}  ·  v{program.version}
+                    מס׳: {program.number}  ·  גרסה: v{program.version}  ·  תאריך: {program.date}
                   </Text>
                 </View>
               </TouchableOpacity>

@@ -4,19 +4,16 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT } from '@/constants/controls';
-import { ConcreteType, ControlImage } from '@/types/project';
+import { ControlImage } from '@/types/project';
 
 import { styles } from './styles';
 
 type Props = {
-  concreteTypes: ConcreteType[];
-  value: ConcreteType | null;
   images: ControlImage[];
-  onChange: (type: ConcreteType) => void;
   onChangeImages: (images: ControlImage[]) => void;
 };
 
-export function StepConcreteType({ concreteTypes, value, images, onChange, onChangeImages }: Props) {
+export function StepOtherControl({ images, onChangeImages }: Props) {
   const pickImage = () => {
     Alert.alert('הוסף תמונה', 'בחר מקור', [
       {
@@ -63,33 +60,10 @@ export function StepConcreteType({ concreteTypes, value, images, onChange, onCha
     onChangeImages(images.map((img, i) => (i === index ? { ...img, description } : img)));
   };
 
-  const isSelected = (ct: ConcreteType) => value?.id === ct.id;
-
   return (
     <View style={styles.stepBody}>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>סוג בטון</Text>
-        {concreteTypes.length === 0 ? (
-          <Text style={styles.emptyHint}>הוסף סוגי בטון </Text>
-        ) : (
-          <View style={styles.chipGrid}>
-            {concreteTypes.map((ct) => (
-              <TouchableOpacity
-                key={ct.id}
-                style={[styles.chip, styles.chipWide, isSelected(ct) && styles.chipSelected]}
-                onPress={() => onChange(ct)}
-                activeOpacity={0.7}>
-                <Text style={[styles.chipText, isSelected(ct) && styles.chipTextSelected]}>
-                  {ct.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-
       <Text style={styles.fieldLabel}>
-        תמונות בקרת בטון{images.length > 0 ? `  ·  ${images.length}` : ''}
+        תמונות בקרת שונות{images.length > 0 ? `  ·  ${images.length}` : ''}
       </Text>
       <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
         <IconSymbol name="plus" size={18} color={ACCENT} />

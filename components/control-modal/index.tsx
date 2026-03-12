@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
@@ -20,6 +21,8 @@ import {
   Program,
 } from '@/types/project';
 
+import { ACCENT } from '@/constants/controls';
+import { StepWaterControl } from './step-airconditioncontrol';
 import { StepConcreteType } from './step-concrete-type';
 import { StepElectricControl } from './step-electriccontrol';
 import {
@@ -30,12 +33,12 @@ import {
 } from './step-element-details';
 import { StepInstalationControl } from './step-instalationcontrol';
 import { StepIronControl } from './step-ironcontrol';
+import { StepOtherControl } from './step-othercontrol';
 import { StepPrograms } from './step-programs';
-import { StepWaterControl } from './step-watercontrol';
 import { styles } from './styles';
 
-const TOTAL_STEPS = 7;
-const STEP_LABELS = ['Element Details', 'Programs', 'Iron Control', 'Electric Control', 'Installation Control', 'Water Control', 'Concrete Type'];
+const TOTAL_STEPS = 8;
+const STEP_LABELS = ['פרטי האלמנט', 'תוכניות', 'בקרת ברזל', 'בקרת חשמל', 'בקרת אינסטלציה', 'בקרת מיזוג אוויר', 'בקרת שונות', 'בקרת יציקה'];
 
 type Props = {
   visible: boolean;
@@ -54,6 +57,7 @@ type Props = {
     electricControlImages: ControlImage[];
     installationControlImages: ControlImage[];
     waterControlImages: ControlImage[];
+    otherControlImages: ControlImage[];
     concreteControlImages: ControlImage[];
     electricNeeded: boolean;
     installationNeeded: boolean;
@@ -83,8 +87,11 @@ export function ControlModal({
   const [waterControlImages, setWaterControlImages] = useState<ControlImage[]>([]);
   const [concreteControlImages, setConcreteControlImages] = useState<ControlImage[]>([]);
   const [electricNeeded, setElectricNeeded] = useState(true);
+  const [otherControlImages, setOtherControlImages] = useState<ControlImage[]>([]);
   const [installationNeeded, setInstallationNeeded] = useState(true);
   const [waterNeeded, setWaterNeeded] = useState(true);
+
+  const insets = useSafeAreaInsets();
 
   const resetAndOpen = () => {
     if (editingControl) {
@@ -108,6 +115,7 @@ export function ControlModal({
       setElectricNeeded(editingControl.electricNeeded ?? true);
       setInstallationNeeded(editingControl.installationNeeded ?? true);
       setWaterNeeded(editingControl.waterNeeded ?? true);
+      setOtherControlImages(editingControl.otherControlImages ?? []);
     } else {
       setStep1(EMPTY_STEP1);
       setSelectedProgramIds([]);
@@ -120,6 +128,7 @@ export function ControlModal({
       setElectricNeeded(true);
       setInstallationNeeded(true);
       setWaterNeeded(true);
+      setOtherControlImages([]);
     }
     setStep(1);
   };
@@ -137,6 +146,7 @@ export function ControlModal({
     setElectricNeeded(true);
     setInstallationNeeded(true);
     setWaterNeeded(true);
+    setOtherControlImages([]);
     onClose();
   };
 
@@ -170,6 +180,7 @@ export function ControlModal({
       electricNeeded,
       installationNeeded,
       waterNeeded,
+      otherControlImages,
     });
     handleClose();
   };
@@ -194,7 +205,7 @@ export function ControlModal({
 
   const canProceed = (() => {
     if (step === 1) return isStep1Valid;
-    if (step === 7) return !!concreteType;
+    if (step === 8) return !!concreteType;
     return true;
   })();
 
@@ -251,6 +262,13 @@ export function ControlModal({
         );
       case 7:
         return (
+          <StepOtherControl
+            images={otherControlImages}
+            onChangeImages={setOtherControlImages}
+          />
+        );
+      case 8:
+        return (
           <StepConcreteType
             concreteTypes={concreteTypes}
             value={concreteType}
@@ -270,44 +288,41 @@ export function ControlModal({
       transparent
       animationType="slide"
       onShow={resetAndOpen}
-      onRequestClose={handleClose}>
+      onRequestClose={handleClose}
+      statusBarTranslucent={Platform.OS === 'android'}
+      hardwareAccelerated={Platform.OS === 'android'}>
       <KeyboardAvoidingView
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={styles.modalOverlayPressable} onPress={handleClose} />
-        <View style={styles.modalSheet}>
+        <View
+          style={[
+            styles.modalSheet,
+            { paddingBottom: Math.max(insets.bottom, 16) },
+          ]}>
           <View style={styles.dragHandle} />
 
           <View style={styles.stepHeader}>
             <View style={styles.stepHeaderRow}>
-              <Text style={styles.modalTitle}>
-                {editingControl
-                  ? 'Edit Control'
-                  : step > 1 && step1.elementName.trim()
-                    ? step1.elementName.trim()
-                    : 'New Control'}
-              </Text>
+              <View style={styles.titleWithStep}>
+                <Text style={styles.modalTitle}>
+                  {editingControl
+                    ? 'עריכת בקרה'
+                    : step > 1 && step1.elementName.trim()
+                      ? step1.elementName.trim()
+                      : 'בקרה חדשה'}
+                </Text>
+                <Text style={styles.stepIndicator}>{step}/{TOTAL_STEPS}</Text>
+              </View>
               {editingControl && !isLastStep && (
                 <TouchableOpacity
                   style={styles.jumpToLastButton}
                   onPress={() => setStep(TOTAL_STEPS)}
                   activeOpacity={0.8}>
-                  <Text style={styles.jumpToLastButtonText}>Last step</Text>
-                  <IconSymbol name="chevron.right" size={14} color="#fff" />
+                  <Text style={styles.jumpToLastButtonText}>שלב אחרון</Text>
+                  <IconSymbol name="chevron.left" size={14} color={ACCENT} />
                 </TouchableOpacity>
               )}
-            </View>
-            <View style={styles.stepDots}>
-              {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[styles.dot, step >= s && styles.dotActive]}
-                  onPress={editingControl ? () => setStep(s) : undefined}
-                  disabled={!editingControl}
-                  activeOpacity={editingControl ? 0.7 : 1}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                />
-              ))}
             </View>
             <Text style={styles.stepLabel}>{STEP_LABELS[step - 1]}</Text>
           </View>
@@ -321,7 +336,7 @@ export function ControlModal({
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
-              <Text style={styles.backButtonText}>{step === 1 ? 'Cancel' : 'Back'}</Text>
+              <Text style={styles.backButtonText}>{step === 1 ? 'ביטול' : 'הקודם'}</Text>
             </TouchableOpacity>
 
             {!isLastStep && (
@@ -334,8 +349,8 @@ export function ControlModal({
                 onPress={handleNext}
                 disabled={!canProceed}
                 activeOpacity={0.8}>
-                <Text style={styles.nextButtonText}>Next</Text>
-                <IconSymbol name="chevron.right" size={16} color="#fff" />
+                <Text style={styles.nextButtonText}>הבא</Text>
+                <IconSymbol name="chevron.left" size={16} color="#fff" />
               </TouchableOpacity>
             )}
 
@@ -349,7 +364,7 @@ export function ControlModal({
                 onPress={handleConfirm}
                 disabled={!canSave}
                 activeOpacity={0.8}>
-                <Text style={styles.nextButtonText}>{editingControl ? 'Save' : 'Create'}</Text>
+                <Text style={styles.nextButtonText}>{editingControl ? 'שמירה' : 'יצירה'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -357,7 +372,7 @@ export function ControlModal({
           {editingControl && (
             <TouchableOpacity style={styles.deleteButton} onPress={onDelete} activeOpacity={0.8}>
               <IconSymbol name="trash" size={16} color="#fff" />
-              <Text style={styles.deleteButtonText}>Delete Control</Text>
+              <Text style={styles.deleteButtonText}>מחיקת בקרה</Text>
             </TouchableOpacity>
           )}
         </View>

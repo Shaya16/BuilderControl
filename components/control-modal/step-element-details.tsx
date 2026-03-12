@@ -36,9 +36,9 @@ export function StepElementDetails({ form, levels, onChange }: Props) {
   return (
     <View style={styles.stepBody}>
       <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Level</Text>
+        <Text style={styles.fieldLabel}>מפלס</Text>
         {levels.length === 0 ? (
-          <Text style={styles.emptyHint}>No levels in this project yet</Text>
+          <Text style={styles.emptyHint}>אין מפלסים בפרוייקט זה</Text>
         ) : (
           <View style={styles.chipGrid}>
             {levels.map((level) => (
@@ -57,10 +57,10 @@ export function StepElementDetails({ form, levels, onChange }: Props) {
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Element Name</Text>
+        <Text style={styles.fieldLabel}>שם האלמנט</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. Column C1"
+          placeholder="דוגמה: עמוד C1"
           placeholderTextColor="#999"
           value={form.elementName}
           onChangeText={(v) => onChange({ elementName: v })}
@@ -81,7 +81,7 @@ export function StepElementDetails({ form, levels, onChange }: Props) {
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Element Type</Text>
+        <Text style={styles.fieldLabel}>סוג האלמנט</Text>
         <View style={styles.chipGrid}>
           {Object.values(ElementType).map((type) => {
             const color = ELEMENT_TYPE_COLORS[type];
@@ -114,7 +114,7 @@ export function StepElementDetails({ form, levels, onChange }: Props) {
                 styles.chipText,
                 form.elementType === ELEMENT_TYPE_OTHER && styles.chipTextSelected,
               ]}>
-              Other
+              אחר
             </Text>
           </TouchableOpacity>
         </View>

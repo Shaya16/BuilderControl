@@ -1,11 +1,11 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { ACCENT } from '@/constants/controls';
 
 export const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   modalOverlayPressable: {
@@ -16,7 +16,10 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '88%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    width: '100%',
+    direction: 'rtl',
+    writingDirection: 'rtl',
+
   },
   dragHandle: {
     width: 40,
@@ -47,37 +50,34 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: ACCENT,
+    backgroundColor: 'white',
     flexShrink: 0,
   },
   jumpToLastButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: ACCENT,
+  },
+  titleWithStep: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
   },
   modalTitle: {
-    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: '#11181C',
   },
-  stepDots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ddd',
-  },
-  dotActive: {
-    backgroundColor: ACCENT,
+  stepIndicator: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ACCENT,
   },
   stepLabel: {
     fontSize: 13,
     color: '#888',
     fontWeight: '500',
+    writingDirection: 'rtl',
   },
   stepScroll: {
     flexGrow: 0,
@@ -88,19 +88,25 @@ export const styles = StyleSheet.create({
   stepBody: {
     padding: 24,
     gap: 20,
+    writingDirection: 'rtl',
   },
   fieldGroup: {
     gap: 8,
+    alignItems: 'flex-start',
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: '#555',
+    writingDirection: 'rtl',
+
   },
   emptyHint: {
     fontSize: 14,
     color: '#aaa',
     fontStyle: 'italic',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
   input: {
     borderWidth: 1,
@@ -110,11 +116,15 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: '#11181C',
+    textAlign: 'right',
+    alignSelf: 'stretch',
   },
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
   },
   chip: {
     paddingHorizontal: 14,
@@ -136,6 +146,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     fontWeight: '500',
+    textAlign: 'right',
   },
   chipTextSelected: {
     color: '#fff',
@@ -152,11 +163,11 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#eee',
-    backgroundColor: '#fafafa',
+    backgroundColor: 'white',
   },
   programRowSelected: {
     borderColor: ACCENT,
-    backgroundColor: '#e8f4f8',
+    backgroundColor: 'rgba(255,106,6,0.10)',
   },
   checkbox: {
     width: 22,
@@ -179,10 +190,12 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#11181C',
+    writingDirection: 'rtl',
   },
   programRowMeta: {
     fontSize: 12,
     color: '#888',
+    writingDirection: 'rtl',
   },
   footer: {
     flexDirection: 'row',

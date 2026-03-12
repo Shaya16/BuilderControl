@@ -18,7 +18,7 @@ type Props = {
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
   const day = d.getDate();
   const month = months[d.getMonth()];
   const year = d.getFullYear();
@@ -101,7 +101,7 @@ export function ControlCard({ control, onPress }: Props) {
             </Text>
           </View>
         </ThemedView>
-        <IconSymbol name="chevron.right" size={16} color={Colors[colorScheme].icon} />
+        <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
       </ThemedView>
     </TouchableOpacity>
   );

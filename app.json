@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "structuralplanner",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -25,6 +25,7 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "expo-localization",
       "expo-image-picker",
       "expo-router",
       [
@@ -45,6 +46,8 @@
       "reactCompiler": true
     },
     "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true,
       "router": {},
       "eas": {
         "projectId": "e71022aa-c776-4c83-aa9c-22968c72bab0"

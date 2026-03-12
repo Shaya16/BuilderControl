@@ -1,18 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, useColorScheme } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 import { ControlCard } from '@/components/control-card';
 import { ControlModal } from '@/components/control-modal';
 import { ControlViewModal } from '@/components/control-view-modal';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT, STORAGE_KEY } from '@/constants/controls';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { ConcreteType, Control, ControlImage, ElementType, Project } from '@/types/project';
 
 import ControlIcon from '@/assets/icons/control.svg';
@@ -23,6 +24,7 @@ export default function ControlsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingControl, setEditingControl] = useState<Control | null>(null);
   const [viewingControl, setViewingControl] = useState<Control | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const colorScheme = useColorScheme() ?? 'light';
 
   const loadProject = useCallback(() => {
@@ -82,6 +84,7 @@ export default function ControlsScreen() {
     installationControlImages: ControlImage[];
     waterControlImages: ControlImage[];
     concreteControlImages: ControlImage[];
+    otherControlImages: ControlImage[];
     electricNeeded: boolean;
     installationNeeded: boolean;
     waterNeeded: boolean;
@@ -105,6 +108,7 @@ export default function ControlsScreen() {
       InstallationControlImages: data.installationControlImages.length > 0 ? data.installationControlImages : undefined,
       WaterControlImages: data.waterControlImages.length > 0 ? data.waterControlImages : undefined,
       ConcreteControlImages: data.concreteControlImages.length > 0 ? data.concreteControlImages : undefined,
+      otherControlImages: data.otherControlImages.length > 0 ? data.otherControlImages : undefined,
       electricNeeded: data.electricNeeded,
       installationNeeded: data.installationNeeded,
       waterNeeded: data.waterNeeded,
@@ -136,7 +140,18 @@ export default function ControlsScreen() {
     setEditingControl(null);
   };
 
-  const controls = project?.controls ?? [];
+  const allControls = project?.controls ?? [];
+  const controls = allControls
+    .filter(
+      (control) =>
+        !searchQuery.trim() ||
+        control.elementName.toLowerCase().includes(searchQuery.trim().toLowerCase())
+    )
+    .sort((a, b) => {
+      const dateA = a.updatedAt ?? a.createdAt ?? '';
+      const dateB = b.updatedAt ?? b.createdAt ?? '';
+      return dateB.localeCompare(dateA);
+    });
   const levels = project?.levels ?? [];
   const concreteTypes = project?.concreteTypes ?? [];
   const latestPrograms = (project?.programs ?? []).filter((p) => p.latestVersion);
@@ -144,45 +159,41 @@ export default function ControlsScreen() {
   return (
     <>
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#E3F2FD', dark: '#0D2137' }}
+        headerBackgroundColor={{ light: '#FE9F39', dark: '#0D2137' }}
         headerImage={<ControlIcon width={220} height={220} fill="white" />}>
 
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace('/')}
-          activeOpacity={0.7}>
-          <IconSymbol name="chevron.left" size={18} color={ACCENT} />
-          <Text style={[styles.backButtonText, { color: ACCENT }]}>Back to Projects</Text>
-        </TouchableOpacity>
+        <TabHeader
+          backLabel="חזרה לפרוייקטים"
+          title="בקרות יציקה"
+          projectName={project?.name}
+          showAddButton={allControls.length > 0}
+          onAddPress={handleAddControl}
+        />
 
-        <ThemedView style={styles.titleContainer}>
-          <ThemedView>
-            <ThemedText type="title" style={{ fontFamily: Fonts?.rounded }}>
-              Controls
-            </ThemedText>
-            {project && (
-              <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 14 }}>
-                {project.name}
-              </ThemedText>
-            )}
-          </ThemedView>
-          {controls.length > 0 && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddControl} activeOpacity={0.8}>
-              <IconSymbol name="plus" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </ThemedView>
+        {allControls.length > 0 && (
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="חפש לפי שם האלמנט..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        )}
 
         {controls.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <ControlIcon width={64} height={64} fill={Colors[colorScheme].icon} />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
-              No controls yet
+              {allControls.length === 0 ? 'No controls yet' : 'No matching controls'}
             </ThemedText>
-            <TouchableOpacity style={styles.bigAddButton} onPress={handleAddControl} activeOpacity={0.8}>
-              <IconSymbol name="plus" size={24} color="#fff" />
-              <Text style={styles.bigAddButtonText}>Add Control</Text>
-            </TouchableOpacity>
+            {allControls.length === 0 ? (
+              <TouchableOpacity style={styles.bigAddButton} onPress={handleAddControl} activeOpacity={0.8}>
+                <IconSymbol name="plus" size={24} color="#fff" />
+                <Text style={styles.bigAddButtonText}>Add Control</Text>
+              </TouchableOpacity>
+            ) : null}
           </ThemedView>
         ) : (
           <ThemedView style={styles.listContainer}>
@@ -215,30 +226,19 @@ export default function ControlsScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  searchRow: {
     marginBottom: 12,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
+  filterInput: {
+    flex: 1,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
   },
   emptyContainer: {
     alignItems: 'center',

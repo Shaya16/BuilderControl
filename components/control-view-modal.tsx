@@ -11,10 +11,13 @@ import {
   Text,
   TouchableOpacity,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
+  ACCENT,
   DEFAULT_ELEMENT_TYPE_COLOR,
   ELEMENT_TYPE_COLORS,
   ELEMENT_TYPE_LABELS,
@@ -92,7 +95,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
             {!!control.elementLocation && (
               <View style={viewStyles.chip}>
                 <IconSymbol name="mappin" size={11} color="#888" />
-                <Text style={viewStyles.chipLabel}>Location:</Text>
+                <Text style={viewStyles.chipLabel}>מיקום:</Text>
                 <Text style={viewStyles.chipText}>{control.elementLocation}</Text>
               </View>
             )}
@@ -105,7 +108,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
               </View>
             )}
             <View style={viewStyles.concreteBadge}>
-              <Text style={viewStyles.concreteBadgeLabel}>Concrete:</Text>
+              <Text style={viewStyles.concreteBadgeLabel}>בטון:</Text>
               <Text style={viewStyles.concreteBadgeText}>{control.concreateType?.name}</Text>
             </View>
           </View>
@@ -118,12 +121,14 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
 
           {/* ── Programs ── */}
           {control.programs.length > 0 && (
-            <Section title="Programs">
+            <Section title="תוכניות">
               {control.programs.map((p) => (
                 <View key={p.id} style={viewStyles.programRow}>
-                  <View style={viewStyles.programDot} />
-                  <Text style={viewStyles.programName}>{p.name}</Text>
-                  <Text style={viewStyles.programMeta}>No. {p.number}  ·  v{p.version}</Text>
+                  <View style={viewStyles.programNameWrap}>
+                    <Text style={viewStyles.programName}>{p.name}</Text>
+                    <View style={viewStyles.programDot} />
+                  </View>
+                  <Text style={viewStyles.programMeta}>מס׳ -  {p.number}  ·  v{p.version}  ·  {p.date}</Text>
                 </View>
               ))}
             </Section>
@@ -131,22 +136,24 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
 
           {/* ── Iron Control ── */}
           <Section
-            title="Iron Control"
+            title="בקרת ברזל"
             count={control.IronControlImages?.length}>
             <ImageList images={control.IronControlImages} />
           </Section>
 
           {/* ── Electric Control ── */}
           <Section
-            title="Electric Control"
+            title="בקרת חשמל"
             badge={
               control.electricNeeded === false
-                ? { label: 'Not needed', color: '#999' }
+                ? { label: 'לא נדרש', color: '#999' }
                 : undefined
             }
             count={control.electricNeeded !== false ? control.ElectricalControlImages?.length : undefined}>
             {control.electricNeeded === false ? (
-              <Text style={viewStyles.emptyHint}>Not needed for this element.</Text>
+              <View style={viewStyles.emptyHintWrap}>
+                <Text style={viewStyles.emptyHint}>לא נדרש עבור אלמנט זה.</Text>
+              </View>
             ) : (
               <ImageList images={control.ElectricalControlImages} />
             )}
@@ -154,15 +161,17 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
 
           {/* ── Installation Control ── */}
           <Section
-            title="Installation Control"
+            title="בקרת אינסטלציה"
             badge={
               control.installationNeeded === false
-                ? { label: 'Not needed', color: '#999' }
+                ? { label: 'לא נדרש', color: '#999' }
                 : undefined
             }
             count={control.installationNeeded !== false ? control.InstallationControlImages?.length : undefined}>
             {control.installationNeeded === false ? (
-              <Text style={viewStyles.emptyHint}>Not needed for this element.</Text>
+              <View style={viewStyles.emptyHintWrap}>
+                <Text style={viewStyles.emptyHint}>לא נדרש עבור אלמנט זה.</Text>
+              </View>
             ) : (
               <ImageList images={control.InstallationControlImages} />
             )}
@@ -170,23 +179,32 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
 
           {/* ── Water Control ── */}
           <Section
-            title="Water Control"
+            title="בקרת מיזוג אוויר"
             badge={
               control.waterNeeded === false
-                ? { label: 'Not needed', color: '#999' }
+                ? { label: 'לא נדרש', color: '#999' }
                 : undefined
             }
             count={control.waterNeeded !== false ? control.WaterControlImages?.length : undefined}>
             {control.waterNeeded === false ? (
-              <Text style={viewStyles.emptyHint}>Not needed for this element.</Text>
+              <View style={viewStyles.emptyHintWrap}>
+                <Text style={viewStyles.emptyHint}>לא נדרש עבור אלמנט זה.</Text>
+              </View>
             ) : (
               <ImageList images={control.WaterControlImages} />
             )}
           </Section>
 
+          {/* ── Other Control ── */}
+          <Section
+            title="בקרת שונות"
+            count={control.otherControlImages?.length}>
+            <ImageList images={control.otherControlImages} />
+          </Section>
+
           {/* ── Concrete Control ── */}
           <Section
-            title="Concrete Control"
+            title="בקרת יציקה"
             count={control.ConcreteControlImages?.length}>
             <ImageList images={control.ConcreteControlImages} />
           </Section>
@@ -197,7 +215,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
         <View style={viewStyles.footer}>
           <TouchableOpacity style={viewStyles.editButton} onPress={onEdit} activeOpacity={0.8}>
             <IconSymbol name="pencil" size={16} color="#fff" />
-            <Text style={viewStyles.editButtonText}>Edit</Text>
+            <Text style={viewStyles.editButtonText}>עריכה</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -206,12 +224,12 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
             disabled={exporting}
             activeOpacity={0.8}>
             {exporting ? (
-              <ActivityIndicator size="small" color="#0a7ea4" />
+              <ActivityIndicator size="small" color={ACCENT} />
             ) : (
-              <IconSymbol name="arrow.down.doc" size={16} color="#0a7ea4" />
+              <IconSymbol name="arrow.down.doc" size={16} color={ACCENT} />
             )}
             <Text style={viewStyles.exportButtonText}>
-              {exporting ? 'Generating…' : 'Export PDF'}
+              {exporting ? 'טוען...' : 'ייצא PDF'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -228,11 +246,12 @@ type SectionProps = {
   count?: number;
   badge?: { label: string; color: string };
   children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
 };
 
-function Section({ title, count, badge, children }: SectionProps) {
+function Section({ title, count, badge, children, style }: SectionProps) {
   return (
-    <View style={viewStyles.section}>
+    <View style={[viewStyles.section, style]}>
       <View style={viewStyles.sectionHeader}>
         <Text style={viewStyles.sectionTitle}>{title}</Text>
         {badge && (
@@ -382,6 +401,7 @@ const viewStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     gap: 10,
+    direction: 'rtl',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -394,6 +414,8 @@ const viewStyles = StyleSheet.create({
     color: '#333',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   sectionBadge: {
     paddingHorizontal: 7,
@@ -417,36 +439,52 @@ const viewStyles = StyleSheet.create({
   countBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0a7ea4',
+    color: ACCENT,
+  },
+  emptyHintWrap: {
+    alignSelf: 'stretch',
+    alignItems: 'flex-start',
   },
   emptyHint: {
     fontSize: 14,
     color: '#aaa',
     fontStyle: 'italic',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   programRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#f0f0f0',
+    direction: 'ltr',
   },
   programDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: ACCENT,
+  },
+  programNameWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   programName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#11181C',
-    flex: 1,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   programMeta: {
     fontSize: 12,
     color: '#888',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   imageList: {
     gap: 8,
@@ -488,7 +526,7 @@ const viewStyles = StyleSheet.create({
     gap: 8,
     paddingVertical: 13,
     borderRadius: 12,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: ACCENT,
   },
   editButtonText: {
     fontSize: 16,
@@ -503,7 +541,7 @@ const viewStyles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#0a7ea4',
+    borderColor: ACCENT,
     backgroundColor: '#fff',
   },
   exportButtonDisabled: {
@@ -512,6 +550,6 @@ const viewStyles = StyleSheet.create({
   exportButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0a7ea4',
+    color: ACCENT,
   },
 });

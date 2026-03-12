@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { router, useGlobalSearchParams } from 'expo-router';
+import { useGlobalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -15,13 +15,14 @@ import {
 } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { Level, Project } from '@/types/project';
 
-const ACCENT = '#0a7ea4';
+import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
 export default function LevelsScreen() {
@@ -105,7 +106,7 @@ export default function LevelsScreen() {
   return (
     <>
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+        headerBackgroundColor={{ light: '#FE9F39', dark: '#1D3D47' }}
         headerImage={
           <IconSymbol
             size={310}
@@ -115,49 +116,27 @@ export default function LevelsScreen() {
           />
         }>
 
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace('/')}
-          activeOpacity={0.7}>
-          <IconSymbol name="chevron.left" size={18} color={ACCENT} />
-          <Text style={[styles.backButtonText, { color: ACCENT }]}>Back to Projects</Text>
-        </TouchableOpacity>
-
-        {/* Title row */}
-        <ThemedView style={styles.titleContainer}>
-          <ThemedView>
-            <ThemedText type="title" style={{ fontFamily: Fonts?.rounded }}>
-              Levels
-            </ThemedText>
-            {project && (
-              <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 14 }}>
-                {project.name}
-              </ThemedText>
-            )}
-          </ThemedView>
-          {levels.length > 0 && (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddLevel}
-              activeOpacity={0.8}>
-              <IconSymbol name="plus" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </ThemedView>
+        <TabHeader
+          backLabel="חזרה לפרוייקטים"
+          title="מפלסים"
+          projectName={project?.name}
+          showAddButton={levels.length > 0}
+          onAddPress={handleAddLevel}
+        />
 
         {/* Empty state */}
         {levels.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
             <IconSymbol name="square.3.layers.3d" size={64} color={Colors[colorScheme].icon} />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
-              No levels yet
+              אין מפלסים עדיין
             </ThemedText>
             <TouchableOpacity
               style={styles.bigAddButton}
               onPress={handleAddLevel}
               activeOpacity={0.8}>
               <IconSymbol name="plus" size={24} color="#fff" />
-              <Text style={styles.bigAddButtonText}>Add Level</Text>
+              <Text style={styles.bigAddButtonText}>הוסף מפלס</Text>
             </TouchableOpacity>
           </ThemedView>
         ) : (
@@ -174,7 +153,7 @@ export default function LevelsScreen() {
                       </ThemedText>
                     ) : null}
                   </ThemedView>
-                  <IconSymbol name="chevron.right" size={16} color={Colors[colorScheme].icon} />
+                  <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
                 </ThemedView>
               </TouchableOpacity>
             ))}
@@ -193,11 +172,11 @@ export default function LevelsScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
-              {editingLevel ? 'Edit Level' : 'New Level'}
+              {editingLevel ? 'ערוך מפלס' : 'הוסף מפלס'}
             </Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Name"
+              placeholder="שם"
               placeholderTextColor="#999"
               value={newName}
               onChangeText={setNewName}
@@ -206,7 +185,7 @@ export default function LevelsScreen() {
             />
             <TextInput
               style={[styles.modalInput, styles.modalInputMultiline]}
-              placeholder="Description (optional)"
+              placeholder="תיאור (אופציונלי)"
               placeholderTextColor="#999"
               value={newDescription}
               onChangeText={setNewDescription}
@@ -219,7 +198,7 @@ export default function LevelsScreen() {
                 style={styles.cancelButton}
                 onPress={() => setModalVisible(false)}
                 activeOpacity={0.7}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>ביטול</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmButton, !newName.trim() && styles.confirmButtonDisabled]}
@@ -227,7 +206,7 @@ export default function LevelsScreen() {
                 activeOpacity={0.8}
                 disabled={!newName.trim()}>
                 <Text style={styles.confirmButtonText}>
-                  {editingLevel ? 'Save' : 'Add'}
+                  {editingLevel ? 'שמור' : 'הוסף'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -239,7 +218,7 @@ export default function LevelsScreen() {
                   onPress={handleDelete}
                   activeOpacity={0.8}>
                   <IconSymbol name="trash" size={16} color="#fff" />
-                  <Text style={styles.deleteButtonText}>Delete Level</Text>
+                  <Text style={styles.deleteButtonText}>מחק מפלס</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -251,36 +230,11 @@ export default function LevelsScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
   headerImage: {
     color: '#808080',
     bottom: -120,
     left: -35,
     position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -308,6 +262,7 @@ const styles = StyleSheet.create({
   },
   levelCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
     padding: 16,
@@ -316,8 +271,10 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   levelCardContent: {
-    flex: 1,
+    justifyContent: 'space-between',
     gap: 4,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   levelName: {
     fontSize: 16,

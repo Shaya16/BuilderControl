@@ -3,9 +3,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,15 +20,16 @@ import {
 } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { Program, Project } from '@/types/project';
 
 import PlanIcon from '@/assets/icons/docs.svg';
 
-const ACCENT = '#0a7ea4';
+import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
 const EMPTY_FORM = { name: '', number: '', version: '', date: '', imageUri: '' };
@@ -103,6 +105,14 @@ export default function ProgramsScreen() {
       date: '',
       imageUri: '',
     });
+  };
+
+  const pickImage = () => {
+    Alert.alert('הוסף תמונה', 'בחר מקור', [
+      { text: 'מצלמה', onPress: () => handlePickImage('camera') },
+      { text: 'גלריה', onPress: () => handlePickImage('gallery') },
+      { text: 'ביטול', style: 'cancel' },
+    ]);
   };
 
   const handlePickImage = async (source: 'camera' | 'gallery') => {
@@ -183,40 +193,18 @@ export default function ProgramsScreen() {
   return (
     <>
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#C8E6C9', dark: '#1B3A1F' }}
+        headerBackgroundColor={{ light: '#FE9F39', dark: '#FFB380' }}
         headerImage={
           <PlanIcon width={220} height={220} fill="white" />
         }>
 
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace('/')}
-          activeOpacity={0.7}>
-          <IconSymbol name="chevron.left" size={18} color={ACCENT} />
-          <Text style={[styles.backButtonText, { color: ACCENT }]}>Back to Projects</Text>
-        </TouchableOpacity>
-
-        {/* Title row */}
-        <ThemedView style={styles.titleContainer}>
-          <ThemedView>
-            <ThemedText type="title" style={{ fontFamily: Fonts?.rounded }}>
-              Programs
-            </ThemedText>
-            {project && (
-              <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 14 }}>
-                {project.name}
-              </ThemedText>
-            )}
-          </ThemedView>
-          {programs.length > 0 && (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddProgram}
-              activeOpacity={0.8}>
-              <IconSymbol name="plus" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </ThemedView>
+        <TabHeader
+          backLabel="חזרה לפרוייקטים"
+          title="תוכניות"
+          projectName={project?.name}
+          showAddButton={programs.length > 0}
+          onAddPress={handleAddProgram}
+        />
 
         {/* Empty state */}
         {programs.length === 0 ? (
@@ -227,14 +215,14 @@ export default function ProgramsScreen() {
               color={Colors[colorScheme].icon}
             />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
-              No programs yet
+              אין תוכניות עדיין
             </ThemedText>
             <TouchableOpacity
               style={styles.bigAddButton}
               onPress={handleAddProgram}
               activeOpacity={0.8}>
               <IconSymbol name="plus" size={24} color="#fff" />
-              <Text style={styles.bigAddButtonText}>Add Program</Text>
+              <Text style={styles.bigAddButtonText}>הוסף תוכנית</Text>
             </TouchableOpacity>
           </ThemedView>
         ) : (
@@ -258,7 +246,7 @@ export default function ProgramsScreen() {
                       <ThemedText style={styles.programName}>{program.name}</ThemedText>
                       {program.latestVersion && (
                         <View style={styles.latestBadge}>
-                          <Text style={styles.latestBadgeText}>Latest</Text>
+                          <Text style={styles.latestBadgeText}>אחרון</Text>
                         </View>
                       )}
                     </ThemedView>
@@ -266,7 +254,7 @@ export default function ProgramsScreen() {
                       {/* Number */}
                       <ThemedView style={styles.metaChip}>
                         <ThemedText style={[styles.metaLabel, { color: Colors[colorScheme].icon }]}>
-                          No.
+                          מס׳
                         </ThemedText>
                         <ThemedText style={styles.metaValue}>{program.number || '—'}</ThemedText>
                       </ThemedView>
@@ -274,7 +262,7 @@ export default function ProgramsScreen() {
                       {/* Version */}
                       <ThemedView style={styles.metaChip}>
                         <ThemedText style={[styles.metaLabel, { color: Colors[colorScheme].icon }]}>
-                          v
+                          גרסה
                         </ThemedText>
                         <ThemedText style={styles.metaValue}>{program.version || '—'}</ThemedText>
                       </ThemedView>
@@ -286,7 +274,7 @@ export default function ProgramsScreen() {
                       </ThemedView>
                     </ThemedView>
                   </ThemedView>
-                  <IconSymbol name="chevron.right" size={16} color={Colors[colorScheme].icon} />
+                  <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
                 </ThemedView>
               </TouchableOpacity>
             ))}
@@ -308,14 +296,14 @@ export default function ProgramsScreen() {
             keyboardShouldPersistTaps="handled">
             <View style={styles.modalBox}>
               <Text style={styles.modalTitle}>
-                {isNewVersion ? 'New Version' : editingProgram ? 'Edit Program' : 'New Program'}
+                {isNewVersion ? 'גרסה חדשה' : editingProgram ? 'ערוך תוכנית' : 'הוסף תוכנית'}
               </Text>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Name</Text>
+                <Text style={styles.fieldLabel}>שם</Text>
                 <TextInput
                   style={[styles.modalInput, isNewVersion && styles.modalInputLocked]}
-                  placeholder="Program name"
+                  placeholder="שם תוכנית"
                   placeholderTextColor="#999"
                   value={form.name}
                   onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
@@ -327,10 +315,10 @@ export default function ProgramsScreen() {
 
               <View style={styles.fieldRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Number</Text>
+                  <Text style={styles.fieldLabel}>מספר</Text>
                   <TextInput
                     style={[styles.modalInput, isNewVersion && styles.modalInputLocked]}
-                    placeholder="042"
+                    placeholder="מספר תוכנית"
                     placeholderTextColor="#999"
                     value={form.number}
                     onChangeText={(v) => setForm((f) => ({ ...f, number: v }))}
@@ -339,10 +327,10 @@ export default function ProgramsScreen() {
                   />
                 </View>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Version</Text>
+                  <Text style={styles.fieldLabel}>גרסה</Text>
                   <TextInput
                     style={styles.modalInput}
-                    placeholder="1.0"
+                    placeholder="גרסה תוכנית"
                     placeholderTextColor="#999"
                     value={form.version}
                     onChangeText={(v) => setForm((f) => ({ ...f, version: v }))}
@@ -353,10 +341,10 @@ export default function ProgramsScreen() {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Date</Text>
+                <Text style={styles.fieldLabel}>תאריך</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="DD/MM/YYYY"
+                  placeholder="תאריך תוכנית"
                   placeholderTextColor="#999"
                   value={form.date}
                   onChangeText={(v) => setForm((f) => ({ ...f, date: v }))}
@@ -366,7 +354,7 @@ export default function ProgramsScreen() {
 
               {/* Image picker */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Image</Text>
+                <Text style={styles.fieldLabel}>תמונה</Text>
                 {form.imageUri ? (
                   <View style={styles.imagePreviewContainer}>
                     <Image
@@ -382,22 +370,13 @@ export default function ProgramsScreen() {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <View style={styles.imagePickerRow}>
-                    <TouchableOpacity
-                      style={styles.imagePickerButton}
-                      onPress={() => handlePickImage('camera')}
-                      activeOpacity={0.7}>
-                      <IconSymbol name="camera" size={20} color={ACCENT} />
-                      <Text style={styles.imagePickerButtonText}>Camera</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.imagePickerButton}
-                      onPress={() => handlePickImage('gallery')}
-                      activeOpacity={0.7}>
-                      <IconSymbol name="photo" size={20} color={ACCENT} />
-                      <Text style={styles.imagePickerButtonText}>Gallery</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.addImageButton}
+                    onPress={pickImage}
+                    activeOpacity={0.7}>
+                    <IconSymbol name="plus" size={18} color={ACCENT} />
+                    <Text style={styles.addImageButtonText}>הוסף תמונה</Text>
+                  </TouchableOpacity>
                 )}
               </View>
 
@@ -406,7 +385,7 @@ export default function ProgramsScreen() {
                   style={styles.cancelButton}
                   onPress={closeModal}
                   activeOpacity={0.7}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>ביטול</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.confirmButton, !isFormValid && styles.confirmButtonDisabled]}
@@ -414,7 +393,7 @@ export default function ProgramsScreen() {
                   activeOpacity={0.8}
                   disabled={!isFormValid}>
                   <Text style={styles.confirmButtonText}>
-                    {isNewVersion ? 'Create' : editingProgram ? 'Save' : 'Add'}
+                    {isNewVersion ? 'צור' : editingProgram ? 'שמור' : 'הוסף'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -428,14 +407,14 @@ export default function ProgramsScreen() {
                       onPress={handleNewVersion}
                       activeOpacity={0.8}>
                       <IconSymbol name="doc.on.doc" size={16} color={ACCENT} />
-                      <Text style={styles.newVersionButtonText}>New Version</Text>
+                      <Text style={styles.newVersionButtonText}>גרסה חדשה</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.deleteButton}
                       onPress={handleDelete}
                       activeOpacity={0.8}>
                       <IconSymbol name="trash" size={16} color="#fff" />
-                      <Text style={styles.deleteButtonText}>Delete</Text>
+
                     </TouchableOpacity>
                   </View>
                 </>
@@ -449,36 +428,11 @@ export default function ProgramsScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
   headerImage: {
     color: '#808080',
     bottom: 0,
     left: -35,
     position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ACCENT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -598,6 +552,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#555',
+    writingDirection: 'rtl',
   },
   modalInput: {
     borderWidth: 1,
@@ -673,6 +628,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
     gap: 8,
     paddingVertical: 12,
     borderRadius: 10,
@@ -690,31 +646,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   // Image picker
-  imagePickerRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  imagePickerButton: {
-    flex: 1,
+  addImageButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
+    padding: 14,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: ACCENT,
+    borderStyle: 'dashed',
+    backgroundColor: 'white',
   },
-  imagePickerButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
+  addImageButtonText: {
     color: ACCENT,
+    fontSize: 15,
+    fontWeight: '600',
   },
   imagePreviewContainer: {
     position: 'relative',
     width: '100%',
     height: 160,
-    overflow: 'hidden',
+
     borderRadius: 10,
   },
   imagePreview: {

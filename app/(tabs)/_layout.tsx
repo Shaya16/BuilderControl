@@ -28,7 +28,7 @@ export default function TabLayout() {
         <Tabs.Screen
         name="index"
         options={{
-          title: 'Controls',
+          title: 'בקרות',
           href: indexHref,
           tabBarIcon: ({ color }) => <ControlIcon width={28} height={28} fill={color} />,
         }}
@@ -36,7 +36,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="levels"
         options={{
-          title: 'Levels',
+          title: 'מפלסים',
           href: levelsHref,
           tabBarIcon: ({ color }) => <LevelsIcon width={28} height={28} fill={color} />,
         }}
@@ -44,7 +44,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="concrete"
         options={{
-          title: 'Concrete',
+          title: 'בטון',
           href: concreteHref,
           tabBarIcon: ({ color }) => <ConcreteIcon width={28} height={28} fill={color} />,
         }}
@@ -52,7 +52,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="programs"
         options={{
-          title: 'Plans',
+          title: 'תוכניות',
           href: programsHref,
           tabBarIcon: ({ color }) => <DocsIcon width={28} height={28} fill={color} />,
         }}

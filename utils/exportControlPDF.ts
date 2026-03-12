@@ -148,6 +148,15 @@ function formatDateTime(iso: string): string {
     + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Sanitize a string for use in filenames (replace spaces/slashes with underscores). */
+function sanitizeFilenamePart(value: string | undefined | null): string {
+  if (!value) return '';
+  return String(value)
+    .replace(/[/\\:*?"<>|]/g, '_')
+    .replace(/\s+/g, '_')
+    .trim() || '';
+}
+
 export async function exportControlPDF(control: Control): Promise<void> {
   const typeColor =
     ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
@@ -157,7 +166,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
     ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ??
     String(control.elementType);
 
-  const [ironHtml, electricHtml, installationHtml, waterHtml, concreteHtml] = await Promise.all([
+  const [ironHtml, electricHtml, installationHtml, waterHtml, otherHtml, concreteHtml] = await Promise.all([
     imagesToHtml(control.IronControlImages),
     control.electricNeeded === false
       ? Promise.resolve(`
@@ -183,6 +192,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
           </div>
         `)
       : imagesToHtml(control.WaterControlImages),
+    imagesToHtml(control.otherControlImages),
     imagesToHtml(control.ConcreteControlImages),
   ]);
 
@@ -202,6 +212,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
                 <th>שם</th>
                 <th>מספר</th>
                 <th>גרסה</th>
+                <th>תאריך</th>
               </tr>
             </thead>
             <tbody>
@@ -212,6 +223,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
                       <td>${escapeHtml(p.name)}</td>
                       <td>${escapeHtml(String(p.number ?? ''))}</td>
                       <td>v${escapeHtml(String(p.version ?? ''))}</td>
+                      <td>${escapeHtml(String(p.date ?? ''))}</td>
                     </tr>
                   `
                 )
@@ -595,6 +607,14 @@ export async function exportControlPDF(control: Control): Promise<void> {
 
     <section class="section-card">
       <div class="section-head">
+        <h2>בקרת שונות</h2>
+        <div class="section-subtitle">תמונות והערות מהשטח</div>
+      </div>
+      ${otherHtml}
+    </section>
+
+    <section class="section-card">
+      <div class="section-head">
         <h2>יציקה</h2>
         <div class="section-subtitle">תמונות והערות מהשטח</div>
       </div>
@@ -604,13 +624,31 @@ export async function exportControlPDF(control: Control): Promise<void> {
 </body>
 </html>`;
 
-  const { uri } = await Print.printToFileAsync({ html });
+  const { uri: tempUri } = await Print.printToFileAsync({ html });
+
+  const elementName = sanitizeFilenamePart(control.elementName);
+  const level = sanitizeFilenamePart(control.Level?.name);
+  const location = sanitizeFilenamePart(control.elementLocation);
+  const elementType = sanitizeFilenamePart(typeLabel);
+  const dateStr = (control.updatedAt ?? control.createdAt)
+    ? new Date(control.updatedAt ?? control.createdAt!).toISOString().slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+  const parts = [elementName, level, location, elementType, dateStr].filter(Boolean);
+  const customFilename = (parts.length > 0 ? parts.join('_') : 'control_report') + '.pdf';
+
+  let shareUri = tempUri;
+  const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (cacheDir && customFilename) {
+    const destUri = `${cacheDir}${customFilename}`;
+    await FileSystem.copyAsync({ from: tempUri, to: destUri });
+    shareUri = destUri;
+  }
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
-    await Sharing.shareAsync(uri, {
+    await Sharing.shareAsync(shareUri, {
       mimeType: 'application/pdf',
-      dialogTitle: `${control.elementName} Control Report`,
+      dialogTitle: `${control.elementName} דוח בקרת אלמנט`,
       UTI: 'com.adobe.pdf',
     });
   }

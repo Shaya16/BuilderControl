@@ -1,17 +1,17 @@
 import { ElementType } from '@/types/project';
 
-export const ACCENT = '#0a7ea4';
+export const ACCENT = '#FF6A06';
 export const STORAGE_KEY = 'projects';
 
 export const ELEMENT_TYPE_LABELS: Record<ElementType, string> = {
-  [ElementType.COLUMN]: 'Column',
-  [ElementType.WALL]: 'Wall',
-  [ElementType.CEILLING_FLOOR]: 'Ceiling / Floor',
-  [ElementType.BEAM]: 'Beam',
+  [ElementType.COLUMN]: 'עמוד',
+  [ElementType.WALL]: 'קיר',
+  [ElementType.CEILLING_FLOOR]: 'רצפה/תקרה',
+  [ElementType.BEAM]: 'עמודה',
 };
 
 export const ELEMENT_TYPE_COLORS: Record<ElementType, string> = {
-  [ElementType.COLUMN]: '#1565C0',
+  [ElementType.COLUMN]: '#FF6A06',
   [ElementType.WALL]: '#6A1B9A',
   [ElementType.CEILLING_FLOOR]: '#E65100',
   [ElementType.BEAM]: '#2E7D32',

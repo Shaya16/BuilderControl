@@ -29,10 +29,10 @@ export type ControlImage = {
 
 
 export enum ElementType {
-    COLUMN = 'column',
-    WALL = 'wall',
-    CEILLING_FLOOR = 'ceilling/floor',
-    BEAM = 'beam',
+    COLUMN = 'עמוד',
+    WALL = 'קיר',
+    CEILLING_FLOOR = 'רצפה/תקרה',
+    BEAM = 'עמודה',
 }
 
 export type Control = {
@@ -49,6 +49,8 @@ export type Control = {
     installationNeeded?:boolean;
     WaterControlImages?: ControlImage[];
     waterNeeded?:boolean;
+    otherControlImages?: ControlImage[];
+    otherControlNeeded?:boolean;
     concreateType: ConcreteType;
     ConcreteControlImages?: ControlImage[];
     /** ISO 8601 date-time string (e.g. from Date.toISOString()) */
