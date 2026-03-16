@@ -12,14 +12,18 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+// import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { Project } from '@/types/project';
 
+import FolderIcon from '@/assets/icons/folder.svg';
+import PlusIcon from '@/assets/icons/plus.svg';
+import LeftIcon from '@/assets/icons/left.svg';
 import { ACCENT, STORAGE_KEY } from '@/constants/controls';
 
 export default function ProjectsScreen() {
@@ -27,6 +31,7 @@ export default function ProjectsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
   const colorScheme = useColorScheme() ?? 'light';
+  const insets = useSafeAreaInsets();
 
   // Load from AsyncStorage on mount
   useEffect(() => {
@@ -62,11 +67,10 @@ export default function ProjectsScreen() {
       <ParallaxScrollView
         headerBackgroundColor={{ light: '#FFD4B7', dark: '#FFB380' }}
         headerImage={
-          <IconSymbol
-            size={220}
-            color={colorScheme === 'dark' ? '#1E3A45' : '#FF6A06'}
-            name="folder.fill"
-            style={styles.headerImage}
+          <FolderIcon
+            width={220}
+            height={220}
+            fill={colorScheme === 'dark' ? '#1E3A45' : '#FF6A06'}
           />
         }>
         <ThemedView style={styles.content}>
@@ -127,7 +131,7 @@ export default function ProjectsScreen() {
                         : 'rgba(255,106,6,0.10)',
                   },
                 ]}>
-                <IconSymbol name="folder.fill" size={38} color={ACCENT} />
+                <FolderIcon width={38} height={38} fill={ACCENT} />
               </View>
   
               <ThemedText style={styles.emptyTitle}>אין פרויקטים עדיין</ThemedText>
@@ -143,7 +147,7 @@ export default function ProjectsScreen() {
                 style={styles.primaryButton}
                 onPress={handleAddProject}
                 activeOpacity={0.85}>
-                <IconSymbol name="plus" size={18} color="#fff" />
+                <PlusIcon width={18} height={18} fill="#fff" />
                 <Text style={styles.primaryButtonText}>פרויקט חדש</Text>
               </TouchableOpacity>
             </ThemedView>
@@ -177,7 +181,7 @@ export default function ProjectsScreen() {
                                 : 'rgba(255,106,6,0.10)',
                           },
                         ]}>
-                        <IconSymbol name="folder.fill" size={20} color={ACCENT} />
+                        <FolderIcon width={20} height={20} fill={ACCENT} />
                       </View>
   
                       <View style={styles.projectTextWrap}>
@@ -204,11 +208,7 @@ export default function ProjectsScreen() {
                               : '#F4F7F8',
                         },
                       ]}>
-                      <IconSymbol
-                        name="chevron.left"
-                        size={16}
-                        color={Colors[colorScheme].icon}
-                      />
+                      <LeftIcon width={16} height={16} fill={Colors[colorScheme].icon} />
                     </View>
                   </ThemedView>
                 </TouchableOpacity>
@@ -220,10 +220,10 @@ export default function ProjectsScreen() {
   
       {/* Floating add button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: Math.max(insets.bottom, 16) + 12 }]}
         onPress={handleAddProject}
         activeOpacity={0.9}>
-        <IconSymbol name="plus" size={20} color="#fff" />
+        <PlusIcon width={20} height={20} fill="#fff" />
         <Text style={styles.fabText}>פרויקט חדש</Text>
       </TouchableOpacity>
   
@@ -487,7 +487,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 28,
     height: 56,
     paddingHorizontal: 18,
     borderRadius: 18,

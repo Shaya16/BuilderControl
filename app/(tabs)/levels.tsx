@@ -19,11 +19,15 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import { Colors } from '@/constants/theme';
 import { Level, Project } from '@/types/project';
 
 import { ACCENT } from '@/constants/controls';
+import LayersIcon from '@/assets/icons/levels.svg';
+import PlusIcon from '@/assets/icons/plus.svg';
+import LeftIcon from '@/assets/icons/left.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
 const STORAGE_KEY = 'projects';
 
 export default function LevelsScreen() {
@@ -109,12 +113,7 @@ export default function LevelsScreen() {
       <ParallaxScrollView
         headerBackgroundColor={{ light: '#FE9F39', dark: '#1D3D47' }}
         headerImage={
-          <IconSymbol
-            size={310}
-            color="white"
-            name="square.3.layers.3d"
-            style={styles.headerImage}
-          />
+          <LayersIcon width={310} height={310} fill="white" />
         }>
 
         <TabHeader
@@ -128,7 +127,7 @@ export default function LevelsScreen() {
         {/* Empty state */}
         {levels.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
-            <IconSymbol name="square.3.layers.3d" size={64} color={Colors[colorScheme].icon} />
+            <LayersIcon width={64} height={64} fill={Colors[colorScheme].icon} />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
               אין מפלסים עדיין
             </ThemedText>
@@ -136,7 +135,7 @@ export default function LevelsScreen() {
               style={styles.bigAddButton}
               onPress={handleAddLevel}
               activeOpacity={0.8}>
-              <IconSymbol name="plus" size={24} color="#fff" />
+              <PlusIcon width={24} height={24} fill="#fff" />
               <Text style={styles.bigAddButtonText}>הוסף מפלס</Text>
             </TouchableOpacity>
           </ThemedView>
@@ -154,7 +153,7 @@ export default function LevelsScreen() {
                       </ThemedText>
                     ) : null}
                   </ThemedView>
-                  <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
+                  <LeftIcon width={16} height={16} fill={Colors[colorScheme].icon} />
                 </ThemedView>
               </TouchableOpacity>
             ))}
@@ -219,7 +218,7 @@ export default function LevelsScreen() {
                   style={styles.deleteButton}
                   onPress={handleDelete}
                   activeOpacity={0.8}>
-                  <IconSymbol name="trash" size={16} color="#fff" />
+                  <TrashIcon width={16} height={16} fill="#fff" />
                   <Text style={styles.deleteButtonText}>מחק מפלס</Text>
                 </TouchableOpacity>
               </>

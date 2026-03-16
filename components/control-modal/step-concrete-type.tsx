@@ -12,11 +12,14 @@ type Props = {
   concreteTypes: ConcreteType[];
   value: ConcreteType | null;
   images: ControlImage[];
+  validatedConcrete: boolean;
+  validatedConcreteAt?: string;
   onChange: (type: ConcreteType) => void;
   onChangeImages: (images: ControlImage[]) => void;
+  onChangeValidatedConcrete: (validated: boolean) => void;
 };
 
-export function StepConcreteType({ concreteTypes, value, images, onChange, onChangeImages }: Props) {
+export function StepConcreteType({ concreteTypes, value, images, validatedConcrete, validatedConcreteAt, onChange, onChangeImages, onChangeValidatedConcrete }: Props) {
   const pickImage = () => {
     Alert.alert('הוסף תמונה', 'בחר מקור', [
       {
@@ -85,6 +88,23 @@ export function StepConcreteType({ concreteTypes, value, images, onChange, onCha
               </TouchableOpacity>
             ))}
           </View>
+        )}
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <TouchableOpacity
+          style={localStyles.checkboxRow}
+          onPress={() => onChangeValidatedConcrete(!validatedConcrete)}
+          activeOpacity={0.7}>
+          <View style={[localStyles.checkbox, validatedConcrete && localStyles.checkboxChecked]}>
+            {validatedConcrete && <IconSymbol name="checkmark" size={14} color="#fff" />}
+          </View>
+          <Text style={localStyles.checkboxLabel}>אישור יציקה </Text>
+        </TouchableOpacity>
+        {validatedConcrete && validatedConcreteAt && (
+          <Text style={localStyles.validatedAtText}>
+            אושר ב: {new Date(validatedConcreteAt).toLocaleDateString('he-IL')} {new Date(validatedConcreteAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
         )}
       </View>
 
@@ -168,5 +188,35 @@ const localStyles = StyleSheet.create({
     color: ACCENT,
     fontSize: 15,
     fontWeight: '600',
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  validatedAtText: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 4,
+    textAlign: 'right',
   },
 });

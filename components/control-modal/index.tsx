@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -62,6 +63,8 @@ type Props = {
     electricNeeded: boolean;
     installationNeeded: boolean;
     waterNeeded: boolean;
+    validatedConcrete: boolean;
+    validatedConcreteAt?: string;
   }) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -90,6 +93,8 @@ export function ControlModal({
   const [otherControlImages, setOtherControlImages] = useState<ControlImage[]>([]);
   const [installationNeeded, setInstallationNeeded] = useState(true);
   const [waterNeeded, setWaterNeeded] = useState(true);
+  const [validatedConcrete, setValidatedConcrete] = useState(false);
+  const [validatedConcreteAt, setValidatedConcreteAt] = useState<string | undefined>(undefined);
 
   const insets = useSafeAreaInsets();
 
@@ -116,6 +121,8 @@ export function ControlModal({
       setInstallationNeeded(editingControl.installationNeeded ?? true);
       setWaterNeeded(editingControl.waterNeeded ?? true);
       setOtherControlImages(editingControl.otherControlImages ?? []);
+      setValidatedConcrete(editingControl.validated_concrete ?? false);
+      setValidatedConcreteAt(editingControl.validated_concrete_at);
     } else {
       setStep1(EMPTY_STEP1);
       setSelectedProgramIds([]);
@@ -129,6 +136,8 @@ export function ControlModal({
       setInstallationNeeded(true);
       setWaterNeeded(true);
       setOtherControlImages([]);
+      setValidatedConcrete(false);
+      setValidatedConcreteAt(undefined);
     }
     setStep(1);
   };
@@ -147,7 +156,43 @@ export function ControlModal({
     setInstallationNeeded(true);
     setWaterNeeded(true);
     setOtherControlImages([]);
+    setValidatedConcrete(false);
+    setValidatedConcreteAt(undefined);
     onClose();
+  };
+
+  const hasDirtyState = (): boolean => {
+    if (editingControl) return true;
+    return (
+      step > 1 ||
+      step1.elementName.trim() !== '' ||
+      step1.elementLocation.trim() !== '' ||
+      !!step1.elementType ||
+      !!step1.levelId ||
+      selectedProgramIds.length > 0 ||
+      concreteType !== null ||
+      ironControlImages.length > 0 ||
+      electricControlImages.length > 0 ||
+      installationControlImages.length > 0 ||
+      waterControlImages.length > 0 ||
+      concreteControlImages.length > 0 ||
+      otherControlImages.length > 0
+    );
+  };
+
+  const confirmClose = () => {
+    if (!hasDirtyState()) {
+      handleClose();
+      return;
+    }
+    Alert.alert(
+      'יציאה',
+      'יש שינויים שלא נשמרו. האם אתה בטוח שברצונך לצאת?',
+      [
+        { text: 'המשך עריכה', style: 'cancel' },
+        { text: 'צא', style: 'destructive', onPress: handleClose },
+      ]
+    );
   };
 
   const handleNext = () => {
@@ -156,7 +201,12 @@ export function ControlModal({
 
   const handleBack = () => {
     if (step > 1) setStep((s) => s - 1);
-    else handleClose();
+    else confirmClose();
+  };
+
+  const handleToggleValidatedConcrete = (val: boolean) => {
+    setValidatedConcrete(val);
+    setValidatedConcreteAt(val ? new Date().toISOString() : undefined);
   };
 
   const handleConfirm = () => {
@@ -181,6 +231,8 @@ export function ControlModal({
       installationNeeded,
       waterNeeded,
       otherControlImages,
+      validatedConcrete,
+      validatedConcreteAt,
     });
     handleClose();
   };
@@ -273,8 +325,11 @@ export function ControlModal({
             concreteTypes={concreteTypes}
             value={concreteType}
             images={concreteControlImages}
+            validatedConcrete={validatedConcrete}
+            validatedConcreteAt={validatedConcreteAt}
             onChange={setConcreteType}
             onChangeImages={setConcreteControlImages}
+            onChangeValidatedConcrete={handleToggleValidatedConcrete}
           />
         );
       default:
@@ -288,13 +343,13 @@ export function ControlModal({
       transparent
       animationType="slide"
       onShow={resetAndOpen}
-      onRequestClose={handleClose}
+      onRequestClose={confirmClose}
       statusBarTranslucent={Platform.OS === 'android'}
       hardwareAccelerated={Platform.OS === 'android'}>
       <KeyboardAvoidingView
         style={styles.modalOverlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <Pressable style={styles.modalOverlayPressable} onPress={handleClose} />
+        <Pressable style={styles.modalOverlayPressable} onPress={confirmClose} />
         <View
           style={[
             styles.modalSheet,

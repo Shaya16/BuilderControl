@@ -9,6 +9,7 @@ import ConcreteIcon from '@/assets/icons/concrete.svg';
 import ControlIcon from '@/assets/icons/control.svg';
 import DocsIcon from '@/assets/icons/docs.svg';
 import LevelsIcon from '@/assets/icons/levels.svg';
+import SettingsIcon from '@/assets/icons/settings.svg';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -18,6 +19,7 @@ export default function TabLayout() {
   const programsHref: Href = projectId ? `/programs?projectId=${projectId}` : '/programs';
   const levelsHref: Href = projectId ? `/levels?projectId=${projectId}` : '/levels';
   const concreteHref: Href = projectId ? `/concrete?projectId=${projectId}` : '/concrete';
+  const settingsHref: Href = projectId ? `/settings?projectId=${projectId}` : '/settings';
   return (
     <Tabs
       screenOptions={{
@@ -57,7 +59,15 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <DocsIcon width={28} height={28} fill={color} />,
         }}
       />
-      
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'הגדרות',
+          href: settingsHref,
+          tabBarIcon: ({ color }) => <SettingsIcon width={28} height={28} fill={color} />,
+        }}
+      />
+
     </Tabs>
   );
 }

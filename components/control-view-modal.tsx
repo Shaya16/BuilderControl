@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as Sharing from 'expo-sharing';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import {
   ACCENT,
   DEFAULT_ELEMENT_TYPE_COLOR,
@@ -26,6 +26,13 @@ import {
 } from '@/constants/controls';
 import { Control, ControlImage } from '@/types/project';
 import { exportControlPDF } from '@/utils/exportControlPDF';
+import XmarkIcon from '@/assets/icons/xmark.svg';
+import LayersIcon from '@/assets/icons/levels.svg';
+import LocationIcon from '@/assets/icons/location.svg';
+import ClockIcon from '@/assets/icons/clock.svg';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import DownloadIcon from '@/assets/icons/download.svg';
+import PencilIcon from '@/assets/icons/pencil.svg';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -37,13 +44,14 @@ function formatDate(iso: string): string {
 type Props = {
   visible: boolean;
   control: Control | null;
+  projectLogoUri?: string;
   onClose: () => void;
   onEdit: () => void;
 };
 
 const EXPORT_TIMEOUT_MS = 60_000;
 
-export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
+export function ControlViewModal({ visible, control, projectLogoUri, onClose, onEdit }: Props) {
   const [exporting, setExporting] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -66,7 +74,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
           EXPORT_TIMEOUT_MS,
         );
       });
-      await Promise.race([exportControlPDF(displayControl), timeoutPromise]);
+      await Promise.race([exportControlPDF(displayControl, { logoUri: projectLogoUri }), timeoutPromise]);
     } catch (err: unknown) {
       const isTimeout = err instanceof Error && err.message === 'export_timeout';
       Alert.alert(
@@ -106,7 +114,8 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
               {displayControl.elementName}
             </Text>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7} hitSlop={12}>
-              <IconSymbol name="xmark" size={16} color="#888" />
+              <XmarkIcon width={16} height={16} color="#888" />
+
             </TouchableOpacity>
           </View>
 
@@ -115,19 +124,19 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
               <Text style={[viewStyles.typeBadgeText, { color: typeColor }]}>{typeLabel}</Text>
             </View>
             <View style={viewStyles.chip}>
-              <IconSymbol name="square.2.layers.3d.fill" size={11} color="#888" />
+              <LayersIcon width={11} height={11} color="#888" />
               <Text style={viewStyles.chipText}>{displayControl.Level.name}</Text>
             </View>
             {!!displayControl.elementLocation && (
               <View style={viewStyles.chip}>
-                <IconSymbol name="mappin" size={11} color="#888" />
+                <LocationIcon width={11} height={11} color="#888" />
                 <Text style={viewStyles.chipLabel}>מיקום:</Text>
                 <Text style={viewStyles.chipText}>{displayControl.elementLocation}</Text>
               </View>
             )}
             {!!(displayControl.createdAt || displayControl.updatedAt) && (
               <View style={viewStyles.chip}>
-                <IconSymbol name="clock" size={11} color="#888" />
+                <ClockIcon width={11} height={11} color="#888" />
                 <Text style={viewStyles.chipText}>
                   {formatDate(displayControl.updatedAt ?? displayControl.createdAt!)}
                 </Text>
@@ -137,6 +146,19 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
               <Text style={viewStyles.concreteBadgeLabel}>בטון:</Text>
               <Text style={viewStyles.concreteBadgeText}>{displayControl.concreateType?.name}</Text>
             </View>
+            {displayControl.validated_concrete && displayControl.validated_concrete_at ? (
+              <View style={[viewStyles.chip, viewStyles.validatedChip]}>
+                <CheckmarkIcon width={12} height={12} color="#2e7d32" />
+                <Text style={[viewStyles.chipText, { color: '#2e7d32' }]}>
+                  היציקה אושרה ב{new Date(displayControl.validated_concrete_at).toLocaleDateString('he-IL')} בשעה {new Date(displayControl.validated_concrete_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            ) : (
+              <View style={[viewStyles.chip, viewStyles.notValidatedChip]}>
+                <XmarkIcon width={12} height={12} color="#c62828" />
+                <Text style={[viewStyles.chipText, { color: '#c62828' }]}>היציקה לא אושרה</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -167,7 +189,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
                           if (available) await Sharing.shareAsync(p.imageUri!);
                         }}
                         activeOpacity={0.8}>
-                        <IconSymbol name="square.and.arrow.down" size={18} color="#fff" />
+                        <DownloadIcon width={18} height={18} color="#fff" />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -256,7 +278,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
         {/* ── Footer ── */}
         <View style={viewStyles.footer}>
           <TouchableOpacity style={viewStyles.editButton} onPress={onEdit} activeOpacity={0.8}>
-            <IconSymbol name="pencil" size={16} color="#fff" />
+            <PencilIcon width={16} height={16} color="#fff" />
             <Text style={viewStyles.editButtonText}>עריכה</Text>
           </TouchableOpacity>
 
@@ -268,7 +290,7 @@ export function ControlViewModal({ visible, control, onClose, onEdit }: Props) {
             {exporting ? (
               <ActivityIndicator size="small" color={ACCENT} />
             ) : (
-              <IconSymbol name="arrow.down.doc" size={16} color={ACCENT} />
+              <DownloadIcon width={16} height={16} color={ACCENT} />
             )}
             <Text style={viewStyles.exportButtonText}>
               {exporting ? 'טוען...' : 'ייצא PDF'}
@@ -336,7 +358,7 @@ function ImageList({ images }: { images?: ControlImage[] }) {
               style={viewStyles.downloadBtn}
               onPress={() => handleDownload(img.uri)}
               activeOpacity={0.8}>
-              <IconSymbol name="square.and.arrow.down" size={18} color="#fff" />
+              <DownloadIcon width={18} height={18} color="#fff" />
             </TouchableOpacity>
           </View>
           {!!img.description && (
@@ -379,7 +401,7 @@ const viewStyles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#eee',
-    borderLeftWidth: 4,
+    borderLeftWidth: 0,
     gap: 8,
   },
   headerTop: {
@@ -388,10 +410,12 @@ const viewStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   elementName: {
+
     fontSize: 20,
     fontWeight: '700',
     color: '#11181C',
-    flex: 1,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -449,6 +473,18 @@ const viewStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#555',
+  },
+  validatedChip: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#a5d6a7',
+  },
+  notValidatedChip: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ef9a9a',
+  },
+  validatedAtChipText: {
+    fontSize: 11,
+    color: '#666',
   },
   scroll: {
     flexGrow: 0,

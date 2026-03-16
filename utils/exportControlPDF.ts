@@ -1,3 +1,4 @@
+import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Print from 'expo-print';
@@ -153,6 +154,7 @@ function renderInfoItem(label: string, value?: string | null): string {
 function renderPage(params: {
   headerTitle: string;
   body: string;
+  logoBase64?: string;
   footerLeft?: string;
   footerRight?: string;
   pageNumber?: number;
@@ -161,7 +163,8 @@ function renderPage(params: {
   const {
     headerTitle,
     body,
-    footerLeft = 'Structural Planner',
+    logoBase64,
+    footerLeft = 'Builder Control',
     footerRight = 'דוח בקרה',
     pageNumber,
     totalPages,
@@ -172,10 +175,14 @@ function renderPage(params: {
       ? `<div class="footer-page">עמוד ${pageNumber} מתוך ${totalPages}</div>`
       : '';
 
+  const logoHtml = logoBase64
+    ? `<img src="${logoBase64}" class="header-logo-img" />`
+    : '';
+
   return `
     <div class="pdf-page">
       <div class="page-header">
-        <div class="header-logo">LOGO</div>
+        <div class="header-logo">${logoHtml}</div>
         <div class="header-title">${escapeHtml(headerTitle)}</div>
       </div>
 
@@ -185,8 +192,11 @@ function renderPage(params: {
 
       <div class="page-footer">
         <div class="footer-branding">
-          <span class="footer-watermark">${escapeHtml(footerLeft)}</span>
-          <span class="footer-credit">BY SHAY AVIVI</span>
+          <div class="footer-watermark-badge">
+            <span class="footer-watermark-icon">✦</span>
+            <span class="footer-watermark-text">${escapeHtml(footerLeft)}</span>
+          </div>
+          <span class="footer-credit">MADE BY SHAY AVIVI</span>
         </div>
         ${pageNumberHtml}
         <div class="footer-label">${escapeHtml(footerRight)}</div>
@@ -195,11 +205,14 @@ function renderPage(params: {
   `;
 }
 
-function renderSection(title: string, subtitle: string, content: string): string {
+function renderSection(title: string, subtitle: string, content: string, headerExtra?: string): string {
   return `
     <section class="section-card">
       <div class="section-head">
-        <h2>${escapeHtml(title)}</h2>
+        <div class="section-head-row">
+          <h2>${escapeHtml(title)}</h2>
+          ${headerExtra ?? ''}
+        </div>
         <div class="section-subtitle">${escapeHtml(subtitle)}</div>
       </div>
       ${content}
@@ -312,12 +325,13 @@ async function imagesToCards(images: ControlImage[] | undefined): Promise<string
 function renderProgramsPages(params: {
   headerTitle: string;
   cards: string[];
+  logoBase64?: string;
   cardsPerPage?: number;
   runId?: string;
   startPageIndex?: number;
   totalPages?: number;
 }): string {
-  const { headerTitle, cards, cardsPerPage = 4, runId, startPageIndex, totalPages } = params;
+  const { headerTitle, cards, logoBase64, cardsPerPage = 4, runId, startPageIndex, totalPages } = params;
   if (!cards.length) return '';
 
   const chunks = chunkArray(cards, cardsPerPage);
@@ -344,6 +358,7 @@ function renderProgramsPages(params: {
     .map((chunk, i) =>
       renderPage({
         headerTitle,
+        logoBase64,
         body: renderSection(
           'תוכניות',
           'מסמכים ותוכניות קשורות',
@@ -361,12 +376,14 @@ function renderImagePages(params: {
   title: string;
   subtitle: string;
   cards: string[];
+  logoBase64?: string;
   cardsPerPage?: number;
   runId?: string;
   startPageIndex?: number;
   totalPages?: number;
+  headerExtra?: string;
 }): string {
-  const { headerTitle, title, subtitle, cards, cardsPerPage = 4, runId, startPageIndex, totalPages } = params;
+  const { headerTitle, title, subtitle, cards, logoBase64, cardsPerPage = 4, runId, startPageIndex, totalPages, headerExtra } = params;
   if (!cards.length) return '';
 
   const chunks = chunkArray(cards, cardsPerPage);
@@ -394,10 +411,12 @@ function renderImagePages(params: {
     .map((chunk, i) =>
       renderPage({
         headerTitle,
+        logoBase64,
         body: renderSection(
           title,
           subtitle,
-          `<div class="grid-2">${chunk.join('')}</div>`
+          `<div class="grid-2">${chunk.join('')}</div>`,
+          i === 0 ? headerExtra : undefined
         ),
         pageNumber: startPageIndex != null && totalPages != null ? startPageIndex + i : undefined,
         totalPages,
@@ -446,6 +465,7 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
 
     .pdf-page {
       width: ${A4_WIDTH}pt;
+
       padding: 22pt 14pt 16pt 14pt;
       display: flex;
       flex-direction: column;
@@ -471,17 +491,23 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
     }
 
     .header-logo {
-      width: 38px;
-      height: 38px;
+      width: 70px;
+      height: 70px;
       border-radius: 8px;
       background: #e2e8f0;
-      color: #64748b;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 9px;
-      font-weight: 700;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .header-logo-img {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
     }
 
     .header-title {
@@ -491,6 +517,7 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
     }
 
     .page-content {
+      min-height: 690pt;
       padding-top: 12pt;
       padding-bottom: 12pt;
     }
@@ -510,23 +537,40 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 2px;
+      gap: 3px;
     }
 
-    .footer-watermark {
-      font-size: 10px;
+    .footer-watermark-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+      border: 0.5px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 2px 6px 2px 5px;
+    }
+
+    .footer-watermark-icon {
+      font-size: 8px;
+      color: #475569;
+      line-height: 1;
+    }
+
+    .footer-watermark-text {
+      font-size: 9px;
       font-weight: 700;
-      color: #64748b;
-      letter-spacing: 0.5px;
+      color: #334155;
+      letter-spacing: 0.4px;
     }
 
     .footer-credit {
-      font-size: 8px;
-      font-weight: 600;
+      font-size: 7px;
+      font-weight: 500;
       color: #94a3b8;
-      letter-spacing: 1.2px;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
-      opacity: 0.9;
+      opacity: 0.75;
+      text-align: right;
     }
 
     .footer-label,
@@ -632,11 +676,41 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
       padding-bottom: 10px;
     }
 
+    .section-head-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+
     .section-head h2 {
       margin: 0 0 4px 0;
       font-size: 18px;
       font-weight: 800;
       color: #0f172a;
+    }
+
+    .validated-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .validated-yes {
+      background: #e8f5e9;
+      border: 1px solid #66bb6a;
+      color: #2e7d32;
+    }
+
+    .validated-no {
+      background: #ffebee;
+      border: 1px solid #ef9a9a;
+      color: #c62828;
     }
 
     .section-subtitle {
@@ -819,7 +893,26 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
 </html>`;
 }
 
-export async function exportControlPDF(control: Control): Promise<void> {
+async function resolveLogoBase64(logoUri?: string): Promise<string> {
+  if (logoUri) {
+    const base64 = await uriToBase64(logoUri);
+    if (base64) return base64;
+  }
+  try {
+    const [asset] = await Asset.loadAsync(require('../assets/images/icon.png'));
+    const assetUri = asset.localUri ?? asset.uri;
+    if (assetUri) {
+      const base64 = await uriToBase64(assetUri);
+      if (base64) return base64;
+    }
+  } catch {}
+  return '';
+}
+
+export async function generateControlPDFFile(
+  control: Control,
+  options?: { logoUri?: string },
+): Promise<string> {
   const runId = `pdf-export-${Date.now()}`;
   const typeColor =
     ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
@@ -830,6 +923,8 @@ export async function exportControlPDF(control: Control): Promise<void> {
     String(control.elementType);
 
   const headerTitle = `${control.elementName} - דוח בקרת אלמנט`;
+
+  const logoBase64 = await resolveLogoBase64(options?.logoUri);
 
   const [
     programCards,
@@ -855,6 +950,10 @@ export async function exportControlPDF(control: Control): Promise<void> {
     imagesToCards(control.ConcreteControlImages),
   ]);
 
+  const validatedConcreteHtml = control.validated_concrete
+    ? `<span class="validated-badge validated-yes">היציקה אושרה ב${control.validated_concrete_at ? new Date(control.validated_concrete_at).toLocaleDateString('he-IL') : ''} בשעה ${control.validated_concrete_at ? new Date(control.validated_concrete_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''}</span>`
+    : `<span class="validated-badge validated-no">היציקה לא אושרה</span>`;
+
   const CARDS_PER_PAGE = 4;
   const programChunks = programCards.length ? chunkArray(programCards, CARDS_PER_PAGE).length : 0;
   const ironChunks = ironCards.length ? chunkArray(ironCards, CARDS_PER_PAGE).length : 0;
@@ -878,6 +977,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
 
   const heroPage = renderPage({
     headerTitle,
+    logoBase64,
     body: `
       <div class="hero">
         <div class="hero-top">
@@ -911,6 +1011,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
     heroPage,
     renderProgramsPages({
       headerTitle,
+      logoBase64,
       cards: programCards,
       runId,
       startPageIndex: pageIndex,
@@ -920,6 +1021,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       pageIndex += programChunks;
       return renderImagePages({
         headerTitle,
+        logoBase64,
         title: 'בקרת ברזל',
         subtitle: 'תמונות והערות מהשטח',
         cards: ironCards,
@@ -932,6 +1034,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       pageIndex += ironChunks;
       return renderImagePages({
         headerTitle,
+        logoBase64,
         title: 'בקרת חשמל',
         subtitle: 'תמונות והערות מהשטח',
         cards: electricCards,
@@ -944,6 +1047,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       pageIndex += electricChunks;
       return renderImagePages({
         headerTitle,
+        logoBase64,
         title: 'בקרת אינסטלציה',
         subtitle: 'תמונות והערות מהשטח',
         cards: installationCards,
@@ -956,6 +1060,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       pageIndex += installationChunks;
       return renderImagePages({
         headerTitle,
+        logoBase64,
         title: 'בקרת מיזוג אוויר',
         subtitle: 'תמונות והערות מהשטח',
         cards: waterCards,
@@ -968,6 +1073,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
       pageIndex += waterChunks;
       return renderImagePages({
         headerTitle,
+        logoBase64,
         title: 'בקרת שונות',
         subtitle: 'תמונות והערות מהשטח',
         cards: otherCards,
@@ -980,12 +1086,14 @@ export async function exportControlPDF(control: Control): Promise<void> {
       pageIndex += otherChunks;
       return renderImagePages({
         headerTitle,
+        logoBase64,
         title: 'יציקה',
         subtitle: 'תמונות והערות מהשטח',
         cards: concreteCards,
         runId,
         startPageIndex: pageIndex,
         totalPages,
+        headerExtra: validatedConcreteHtml,
       });
     })(),
   ]
@@ -1065,7 +1173,7 @@ export async function exportControlPDF(control: Control): Promise<void> {
   const parts = [elementName, level, location, elementType, dateStr].filter(Boolean);
   const customFilename = `${parts.length ? parts.join('_') : 'control_report'}.pdf`;
 
-  let shareUri = tempUri;
+  let fileUri = tempUri;
   const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
 
   if (cacheDir) {
@@ -1081,12 +1189,21 @@ export async function exportControlPDF(control: Control): Promise<void> {
     }
 
     await FileSystem.copyAsync({ from: tempUri, to: destUri });
-    shareUri = destUri;
+    fileUri = destUri;
   }
+
+  return fileUri;
+}
+
+export async function exportControlPDF(
+  control: Control,
+  options?: { logoUri?: string },
+): Promise<void> {
+  const fileUri = await generateControlPDFFile(control, options);
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
-    await Sharing.shareAsync(shareUri, {
+    await Sharing.shareAsync(fileUri, {
       mimeType: 'application/pdf',
       dialogTitle: `${control.elementName} דוח בקרת אלמנט`,
       UTI: 'com.adobe.pdf',

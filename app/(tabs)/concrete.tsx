@@ -20,11 +20,14 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import { Colors } from '@/constants/theme';
 import { ConcreteType, Project } from '@/types/project';
 
 import { ACCENT } from '@/constants/controls';
+import PlusIcon from '@/assets/icons/plus.svg';
+import LeftIcon from '@/assets/icons/left.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
 const STORAGE_KEY = 'projects';
 
 export default function ConcreteScreen() {
@@ -120,7 +123,7 @@ export default function ConcreteScreen() {
         {/* Empty state */}
         {concreteTypes.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
-            <IconSymbol name="square.3.layers.3d" size={64} color={Colors[colorScheme].icon} />
+            <ConcreteIcon width={64} height={64} fill={Colors[colorScheme].icon} />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
               אין סוגי בטון עדיין
             </ThemedText>
@@ -128,7 +131,7 @@ export default function ConcreteScreen() {
               style={styles.bigAddButton}
               onPress={handleAddConcrete}
               activeOpacity={0.8}>
-              <IconSymbol name="plus" size={24} color="#fff" />
+              <PlusIcon width={24} height={24} fill="#fff" />
               <Text style={styles.bigAddButtonText}>הוסף סוג בטון</Text>
             </TouchableOpacity>
           </ThemedView>
@@ -144,7 +147,7 @@ export default function ConcreteScreen() {
                   <ThemedView style={styles.concreteTypeCardContent}>
                     <ThemedText style={styles.concreteTypeName}>{concreteType.name}</ThemedText>
                   </ThemedView>
-                  <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
+                  <LeftIcon width={16} height={16} fill={Colors[colorScheme].icon} />
                 </ThemedView>
               </TouchableOpacity>
             ))}
@@ -200,7 +203,7 @@ export default function ConcreteScreen() {
                   style={styles.deleteButton}
                   onPress={handleDelete}
                   activeOpacity={0.8}>
-                  <IconSymbol name="trash" size={16} color="#fff" />
+                  <TrashIcon width={16} height={16} fill="#fff" />
                   <Text style={styles.deleteButtonText}>מחק סוג בטון</Text>
                 </TouchableOpacity>
               </>

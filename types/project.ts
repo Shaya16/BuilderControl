@@ -52,6 +52,8 @@ export type Control = {
     otherControlImages?: ControlImage[];
     otherControlNeeded?:boolean;
     concreateType: ConcreteType;
+    validated_concrete?: boolean;
+    validated_concrete_at?: string;
     ConcreteControlImages?: ControlImage[];
     /** ISO 8601 date-time string (e.g. from Date.toISOString()) */
     createdAt?: string;
@@ -62,6 +64,8 @@ export type Control = {
   export type Project = {
     id: string;
     name: string;
+    companyName?: string;
+    logoUri?: string;
     levels?: Level[];
     concreteTypes?: ConcreteType[];
     programs?: Program[];

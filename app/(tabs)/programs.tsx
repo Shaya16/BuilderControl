@@ -24,12 +24,19 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import { Colors } from '@/constants/theme';
 import { Program, Project } from '@/types/project';
 
 import PlanIcon from '@/assets/icons/docs.svg';
-
+import PlusIcon from '@/assets/icons/plus.svg';
+import ListIcon from '@/assets/icons/list.svg';
+import CalendarIcon from '@/assets/icons/calendar.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
+import DocIcon from '@/assets/icons/docs.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import LeftIcon from '@/assets/icons/left.svg';
 import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
@@ -128,8 +135,8 @@ export default function ProgramsScreen() {
     }
 
     const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.8, allowsEditing: true });
+      ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
 
     if (!result.canceled && result.assets[0]) {
       const tempUri = result.assets[0].uri;
@@ -212,11 +219,7 @@ export default function ProgramsScreen() {
         {/* Empty state */}
         {programs.length === 0 ? (
           <ThemedView style={styles.emptyContainer}>
-            <IconSymbol
-              name="list.bullet.rectangle.portrait.fill"
-              size={64}
-              color={Colors[colorScheme].icon}
-            />
+            <ListIcon width={64} height={64} fill={Colors[colorScheme].icon} />
             <ThemedText style={{ color: Colors[colorScheme].icon, fontSize: 16 }}>
               אין תוכניות עדיין
             </ThemedText>
@@ -224,7 +227,7 @@ export default function ProgramsScreen() {
               style={styles.bigAddButton}
               onPress={handleAddProgram}
               activeOpacity={0.8}>
-              <IconSymbol name="plus" size={24} color="#fff" />
+              <PlusIcon width={24} height={24} fill="#fff" />
               <Text style={styles.bigAddButtonText}>הוסף תוכנית</Text>
             </TouchableOpacity>
           </ThemedView>
@@ -272,12 +275,12 @@ export default function ProgramsScreen() {
                       <ThemedView style={styles.metaSeparator} />
                       {/* Date */}
                       <ThemedView style={styles.metaChip}>
-                        <IconSymbol name="calendar" size={12} color={Colors[colorScheme].icon} />
+                        <CalendarIcon width={12} height={12} fill={Colors[colorScheme].icon} />
                         <ThemedText style={styles.metaValue}>{program.date || '—'}</ThemedText>
                       </ThemedView>
                     </ThemedView>
                   </ThemedView>
-                  <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
+                  <LeftIcon width={16} height={16} fill={Colors[colorScheme].icon} />
                 </ThemedView>
               </TouchableOpacity>
             ))}
@@ -370,7 +373,7 @@ export default function ProgramsScreen() {
                       style={styles.imageRemoveButton}
                       onPress={() => setForm((f) => ({ ...f, imageUri: '' }))}
                       activeOpacity={0.8}>
-                      <IconSymbol name="xmark.circle.fill" size={24} color="#e53935" />
+                      <XmarkIcon width={24} height={24} fill="#e53935" />
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -378,7 +381,7 @@ export default function ProgramsScreen() {
                     style={styles.addImageButton}
                     onPress={pickImage}
                     activeOpacity={0.7}>
-                    <IconSymbol name="plus" size={18} color={ACCENT} />
+                    <PlusIcon width={18} height={18} fill={ACCENT} />
                     <Text style={styles.addImageButtonText}>הוסף תמונה</Text>
                   </TouchableOpacity>
                 )}
@@ -389,11 +392,7 @@ export default function ProgramsScreen() {
                 style={styles.checkboxRow}
                 onPress={() => setForm((f) => ({ ...f, latestVersion: !f.latestVersion }))}
                 activeOpacity={0.7}>
-                <IconSymbol
-                  name={form.latestVersion ? 'checkmark.square.fill' : 'square'}
-                  size={24}
-                  color={form.latestVersion ? ACCENT : '#999'}
-                />
+                <CheckmarkIcon width={24} height={24} fill={form.latestVersion ? ACCENT : '#999'} />
                 <Text style={styles.checkboxLabel}>גרסה אחרונה</Text>
               </TouchableOpacity>
 
@@ -423,14 +422,14 @@ export default function ProgramsScreen() {
                       style={styles.newVersionButton}
                       onPress={handleNewVersion}
                       activeOpacity={0.8}>
-                      <IconSymbol name="doc.on.doc" size={16} color={ACCENT} />
+                      <DocIcon width={16} height={16} fill={ACCENT} />
                       <Text style={styles.newVersionButtonText}>גרסה חדשה</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.deleteButton}
                       onPress={handleDelete}
                       activeOpacity={0.8}>
-                      <IconSymbol name="trash" size={16} color="#fff" />
+                      <TrashIcon width={16} height={16} fill="#fff" />
 
                     </TouchableOpacity>
                   </View>

@@ -4,6 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import {
+  ACCENT,
   DEFAULT_ELEMENT_TYPE_COLOR,
   ELEMENT_TYPE_COLORS,
   ELEMENT_TYPE_LABELS,
@@ -14,6 +15,9 @@ import { Control } from '@/types/project';
 type Props = {
   control: Control;
   onPress: (control: Control) => void;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (control: Control) => void;
 };
 
 function formatTimestamp(iso: string): string {
@@ -27,7 +31,7 @@ function formatTimestamp(iso: string): string {
   return `${day} ${month} ${year} · ${hours}:${minutes}`;
 }
 
-export function ControlCard({ control, onPress }: Props) {
+export function ControlCard({ control, onPress, selectionMode, selected, onToggleSelect }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const typeColor =
     ELEMENT_TYPE_COLORS[control.elementType as keyof typeof ELEMENT_TYPE_COLORS] ??
@@ -39,9 +43,33 @@ export function ControlCard({ control, onPress }: Props) {
       ? formatTimestamp(control.createdAt)
       : null;
 
+  const handlePress = () => {
+    if (selectionMode && onToggleSelect) {
+      onToggleSelect(control);
+    } else {
+      onPress(control);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (!selectionMode && onToggleSelect) {
+      onToggleSelect(control);
+    }
+  };
+
   return (
-    <TouchableOpacity onPress={() => onPress(control)} activeOpacity={0.7}>
-      <ThemedView style={styles.controlCard}>
+    <TouchableOpacity
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      activeOpacity={0.7}>
+      <ThemedView style={[styles.controlCard, selectionMode && selected && styles.controlCardSelected]}>
+        {selectionMode && (
+          <View style={styles.checkboxWrap}>
+            <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
+              {selected && <IconSymbol name="checkmark" size={12} color="#fff" />}
+            </View>
+          </View>
+        )}
         <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
         <ThemedView style={styles.cardContent}>
           <ThemedView style={styles.cardHeader}>
@@ -100,6 +128,22 @@ export function ControlCard({ control, onPress }: Props) {
               {control.concreateType.name}
             </Text>
           </View>
+
+          {control.validated_concrete && control.validated_concrete_at ? (
+            <View style={[styles.validationChip, styles.validationChipApproved]}>
+              <IconSymbol name="checkmark.seal.fill" size={11} color="#2e7d32" />
+              <Text style={[styles.validationChipText, { color: '#2e7d32' }]}>
+                היציקה אושרה
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.validationChip, styles.validationChipNotApproved]}>
+              <IconSymbol name="xmark.seal" size={11} color="#c62828" />
+              <Text style={[styles.validationChipText, { color: '#c62828' }]}>
+                היציקה לא אושרה
+              </Text>
+            </View>
+          )}
         </ThemedView>
         <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
       </ThemedView>
@@ -181,7 +225,53 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#555',
   },
+  validationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  validationChipApproved: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#a5d6a7',
+  },
+  validationChipNotApproved: {
+    backgroundColor: '#ffebee',
+    borderColor: '#ef9a9a',
+  },
+  validationChipText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
   timestampText: {
     fontSize: 11,
+  },
+  controlCardSelected: {
+    borderColor: ACCENT,
+    borderWidth: 1.5,
+    backgroundColor: `${ACCENT}08`,
+  },
+  checkboxWrap: {
+    paddingLeft: 12,
+    justifyContent: 'center',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
   },
 });
