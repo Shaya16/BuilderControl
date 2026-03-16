@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import * as ImagePicker from 'expo-image-picker';
@@ -15,11 +16,14 @@ type Props = {
   validatedConcrete: boolean;
   validatedConcreteAt?: string;
   onChange: (type: ConcreteType) => void;
+  onAddConcreteType: (name: string) => ConcreteType;
   onChangeImages: (images: ControlImage[]) => void;
   onChangeValidatedConcrete: (validated: boolean) => void;
 };
 
-export function StepConcreteType({ concreteTypes, value, images, validatedConcrete, validatedConcreteAt, onChange, onChangeImages, onChangeValidatedConcrete }: Props) {
+export function StepConcreteType({ concreteTypes, value, images, validatedConcrete, validatedConcreteAt, onChange, onAddConcreteType, onChangeImages, onChangeValidatedConcrete }: Props) {
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherName, setOtherName] = useState('');
   const pickImage = () => {
     Alert.alert('הוסף תמונה', 'בחר מקור', [
       {
@@ -68,25 +72,65 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
 
   const isSelected = (ct: ConcreteType) => value?.id === ct.id;
 
+  const handleConfirmOther = () => {
+    const trimmed = otherName.trim();
+    if (!trimmed) return;
+    const newType = onAddConcreteType(trimmed);
+    onChange(newType);
+    setOtherName('');
+    setShowOtherInput(false);
+  };
+
   return (
     <View style={styles.stepBody}>
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>סוג בטון</Text>
-        {concreteTypes.length === 0 ? (
-          <Text style={styles.emptyHint}>הוסף סוגי בטון </Text>
-        ) : (
-          <View style={styles.chipGrid}>
-            {concreteTypes.map((ct) => (
-              <TouchableOpacity
-                key={ct.id}
-                style={[styles.chip, styles.chipWide, isSelected(ct) && styles.chipSelected]}
-                onPress={() => onChange(ct)}
-                activeOpacity={0.7}>
-                <Text style={[styles.chipText, isSelected(ct) && styles.chipTextSelected]}>
-                  {ct.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        <View style={styles.chipGrid}>
+          {concreteTypes.map((ct) => (
+            <TouchableOpacity
+              key={ct.id}
+              style={[styles.chip, styles.chipWide, isSelected(ct) && styles.chipSelected]}
+              onPress={() => {
+                setShowOtherInput(false);
+                onChange(ct);
+              }}
+              activeOpacity={0.7}>
+              <Text style={[styles.chipText, isSelected(ct) && styles.chipTextSelected]}>
+                {ct.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[styles.chip, styles.chipWide, showOtherInput && localStyles.otherChipActive]}
+            onPress={() => setShowOtherInput((prev) => !prev)}
+            activeOpacity={0.7}>
+            <View style={localStyles.otherChipContent}>
+              <IconSymbol name="plus" size={14} color={showOtherInput ? '#fff' : ACCENT} />
+              <Text style={[styles.chipText, { color: showOtherInput ? '#fff' : ACCENT }]}>
+                אחר
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        {showOtherInput && (
+          <View style={localStyles.otherInputRow}>
+            <TextInput
+              style={[styles.input, localStyles.otherInput]}
+              value={otherName}
+              onChangeText={setOtherName}
+              placeholder="שם סוג בטון חדש..."
+              placeholderTextColor="#aaa"
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleConfirmOther}
+            />
+            <TouchableOpacity
+              style={[localStyles.otherConfirmBtn, !otherName.trim() && localStyles.otherConfirmBtnDisabled]}
+              onPress={handleConfirmOther}
+              disabled={!otherName.trim()}
+              activeOpacity={0.8}>
+              <Text style={localStyles.otherConfirmBtnText}>הוסף</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -142,6 +186,38 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
 }
 
 const localStyles = StyleSheet.create({
+  otherChipActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  otherChipContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  otherInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'stretch',
+  },
+  otherInput: {
+    flex: 1,
+  },
+  otherConfirmBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: ACCENT,
+  },
+  otherConfirmBtnDisabled: {
+    opacity: 0.4,
+  },
+  otherConfirmBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   imageCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',

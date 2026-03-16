@@ -49,6 +49,7 @@ export default function ProgramsScreen() {
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [searchQuery, setSearchQuery] = useState('');
   const colorScheme = useColorScheme() ?? 'light';
 
   console.log('projectId', projectId);
@@ -198,6 +199,9 @@ export default function ProgramsScreen() {
   };
 
   const programs = project?.programs ?? [];
+  const filteredPrograms = searchQuery.trim()
+    ? programs.filter((p) => p.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : programs;
   const isFormValid = form.name.trim().length > 0;
 
   return (
@@ -215,6 +219,30 @@ export default function ProgramsScreen() {
           showAddButton={programs.length > 0}
           onAddPress={handleAddProgram}
         />
+
+        {programs.length > 0 && (
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputWrapper}>
+              <TextInput
+                style={[styles.searchInput, { color: Colors[colorScheme].text }]}
+                placeholder="חפש תוכנית לפי שם..."
+                placeholderTextColor={Colors[colorScheme].icon}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="while-editing"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.searchClearButton}
+                  onPress={() => setSearchQuery('')}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <XmarkIcon width={16} height={16} fill={Colors[colorScheme].icon} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Empty state */}
         {programs.length === 0 ? (
@@ -234,7 +262,10 @@ export default function ProgramsScreen() {
         ) : (
           /* Programs list */
           <ThemedView style={styles.listContainer}>
-            {programs.map((program) => (
+            {filteredPrograms.length === 0 ? (
+              <ThemedText style={styles.noResultsText}>לא נמצאו תוכניות</ThemedText>
+            ) : null}
+            {filteredPrograms.map((program) => (
               <TouchableOpacity
                 key={program.id}
                 onPress={() => handleEditProgram(program)}
@@ -470,6 +501,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  searchContainer: {
+    marginBottom: 4,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  searchClearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  noResultsText: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#999',
+    paddingVertical: 24,
   },
   listContainer: {
     gap: 10,

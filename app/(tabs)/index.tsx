@@ -281,14 +281,26 @@ export default function ControlsScreen() {
         />
 
         {allControls.length > 0 && (
-          <View style={styles.searchRow}>
-            <TextInput
-              style={styles.filterInput}
-              placeholder="חפש לפי שם האלמנט..."
-              placeholderTextColor="#999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputWrapper}>
+              <TextInput
+                style={[styles.searchInput, { color: Colors[colorScheme].text }]}
+                placeholder="חפש לפי שם האלמנט..."
+                placeholderTextColor={Colors[colorScheme].icon}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                clearButtonMode="while-editing"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.searchClearButton}
+                  onPress={() => setSearchQuery('')}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <XmarkIcon width={16} height={16} fill={Colors[colorScheme].icon} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
 
@@ -364,6 +376,13 @@ export default function ControlsScreen() {
         concreteTypes={concreteTypes}
         latestPrograms={latestPrograms}
         onSave={handleSave}
+        onAddConcreteType={(name: string) => {
+          const newType: ConcreteType = { id: Date.now().toString(), name };
+          if (project) {
+            saveProject({ ...project, concreteTypes: [...(project.concreteTypes ?? []), newType] });
+          }
+          return newType;
+        }}
         onDelete={handleDelete}
         onClose={handleCloseModal}
       />
@@ -421,19 +440,28 @@ export default function ControlsScreen() {
 }
 
 const styles = StyleSheet.create({
-  searchRow: {
-    marginBottom: 12,
+  searchContainer: {
+    marginBottom: 4,
   },
-  filterInput: {
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+  },
+  searchInput: {
     flex: 1,
     writingDirection: 'rtl',
     textAlign: 'right',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
+  },
+  searchClearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   emptyContainer: {
     alignItems: 'center',

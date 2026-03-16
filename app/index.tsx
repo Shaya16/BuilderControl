@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,19 +19,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-// import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { Project } from '@/types/project';
+import { exportProjectsToJSON, importProjectsFromJSON } from '@/utils/exportProjectsJSON';
 
 import FolderIcon from '@/assets/icons/folder.svg';
 import PlusIcon from '@/assets/icons/plus.svg';
 import LeftIcon from '@/assets/icons/left.svg';
+import DownloadIcon from '@/assets/icons/download.svg';
+import ArrowTriangleIcon from '@/assets/icons/arrow_triangle.svg';
 import { ACCENT, STORAGE_KEY } from '@/constants/controls';
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
+  const [jsonBusy, setJsonBusy] = useState(false);
+  const [jsonProgress, setJsonProgress] = useState({ label: '', current: 0, total: 0 });
   const colorScheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
 
@@ -60,6 +66,68 @@ export default function ProjectsScreen() {
 
   const handleSelectProject = (project: Project) => {
     router.push({ pathname: '/(tabs)', params: { projectId: project.id } });
+  };
+
+  const handleExportJSON = async () => {
+    if (projects.length === 0) {
+      Alert.alert('אין פרויקטים', 'אין פרויקטים לייצוא');
+      return;
+    }
+    setJsonBusy(true);
+    setJsonProgress({ label: 'מייצא פרויקטים...', current: 0, total: projects.length });
+    try {
+      await exportProjectsToJSON(projects, (current, total) => {
+        setJsonProgress({ label: 'מייצא פרויקטים...', current, total });
+      });
+    } catch (e: any) {
+      Alert.alert('שגיאה', e?.message ?? 'לא ניתן לייצא את הפרויקטים');
+    } finally {
+      setJsonBusy(false);
+    }
+  };
+
+  const handleImportJSON = async () => {
+    try {
+      setJsonBusy(true);
+      setJsonProgress({ label: 'מייבא פרויקטים...', current: 0, total: 0 });
+      const imported = await importProjectsFromJSON((current, total) => {
+        setJsonProgress({ label: 'מייבא פרויקטים...', current, total });
+      });
+      setJsonBusy(false);
+      if (!imported) return;
+
+      Alert.alert(
+        'ייבוא פרויקטים',
+        `נמצאו ${imported.length} פרויקטים. האם לייבא אותם?`,
+        [
+          { text: 'ביטול', style: 'cancel' },
+          {
+            text: 'החלף הכל',
+            style: 'destructive',
+            onPress: () => {
+              setProjects(imported);
+            },
+          },
+          {
+            text: 'מזג',
+            onPress: () => {
+              setProjects((prev) => {
+                const existingIds = new Set(prev.map((p) => p.id));
+                const newOnes = imported.filter((p) => !existingIds.has(p.id));
+                const updated = prev.map((p) => {
+                  const match = imported.find((ip) => ip.id === p.id);
+                  return match ?? p;
+                });
+                return [...updated, ...newOnes];
+              });
+            },
+          },
+        ],
+      );
+    } catch (e: any) {
+      setJsonBusy(false);
+      Alert.alert('שגיאה', e?.message ?? 'לא ניתן לייבא את הקובץ');
+    }
   };
 
   return (
@@ -107,6 +175,59 @@ export default function ProjectsScreen() {
             )}
           </ThemedView>
   
+          {/* Import / Export */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                  borderColor:
+                    colorScheme === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(17,24,28,0.08)',
+                },
+              ]}
+              onPress={handleImportJSON}
+              activeOpacity={0.8}>
+              <ArrowTriangleIcon width={16} height={16} fill={ACCENT} />
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+                ]}>
+                ייבוא
+              </Text>
+            </TouchableOpacity>
+
+            {projects.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                    borderColor:
+                      colorScheme === 'dark'
+                        ? 'rgba(255,255,255,0.08)'
+                        : 'rgba(17,24,28,0.08)',
+                  },
+                ]}
+                onPress={handleExportJSON}
+                activeOpacity={0.8}>
+                <DownloadIcon width={16} height={16} fill={ACCENT} />
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+                  ]}>
+                  ייצוא
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           {/* Empty state */}
           {projects.length === 0 ? (
             <ThemedView
@@ -320,6 +441,32 @@ export default function ProjectsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {jsonBusy && (
+        <View style={styles.jsonOverlay}>
+          <View style={styles.jsonOverlayBox}>
+            <ActivityIndicator size="large" color={ACCENT} />
+            <Text style={styles.jsonOverlayTitle}>{jsonProgress.label}</Text>
+            {jsonProgress.total > 0 && (
+              <>
+                <Text style={styles.jsonOverlayProgress}>
+                  {jsonProgress.current} / {jsonProgress.total}
+                </Text>
+                <View style={styles.jsonProgressTrack}>
+                  <View
+                    style={[
+                      styles.jsonProgressFill,
+                      {
+                        width: `${(jsonProgress.current / jsonProgress.total) * 100}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      )}
     </>
   );
 }
@@ -579,5 +726,69 @@ const styles = StyleSheet.create({
     color: '#fff',
     writingDirection: 'rtl',
     textAlign: 'right',
+  },
+
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    writingDirection: 'rtl',
+  },
+
+  jsonOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  jsonOverlayBox: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    gap: 12,
+    width: 260,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  jsonOverlayTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#11181C',
+    writingDirection: 'rtl',
+  },
+  jsonOverlayProgress: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+  },
+  jsonProgressTrack: {
+    width: '100%',
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  jsonProgressFill: {
+    height: '100%',
+    backgroundColor: ACCENT,
+    borderRadius: 3,
   },
 });

@@ -66,6 +66,7 @@ type Props = {
     validatedConcrete: boolean;
     validatedConcreteAt?: string;
   }) => void;
+  onAddConcreteType: (name: string) => ConcreteType;
   onDelete: () => void;
   onClose: () => void;
 };
@@ -77,6 +78,7 @@ export function ControlModal({
   concreteTypes,
   latestPrograms,
   onSave,
+  onAddConcreteType,
   onDelete,
   onClose,
 }: Props) {
@@ -328,6 +330,7 @@ export function ControlModal({
             validatedConcrete={validatedConcrete}
             validatedConcreteAt={validatedConcreteAt}
             onChange={setConcreteType}
+            onAddConcreteType={onAddConcreteType}
             onChangeImages={setConcreteControlImages}
             onChangeValidatedConcrete={handleToggleValidatedConcrete}
           />
