@@ -3,6 +3,12 @@ import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import ClockIcon from '@/assets/icons/clock.svg';
+import LayersIcon from '@/assets/icons/levels.svg';
+import ListIcon from '@/assets/icons/list.svg';
+import LocationIcon from '@/assets/icons/location.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
 import {
   ACCENT,
   DEFAULT_ELEMENT_TYPE_COLOR,
@@ -11,13 +17,6 @@ import {
 } from '@/constants/controls';
 import { Colors } from '@/constants/theme';
 import { Control } from '@/types/project';
-import CheckmarkIcon from '@/assets/icons/checkmark.svg';
-import XmarkIcon from '@/assets/icons/xmark.svg';
-import LeftIcon from '@/assets/icons/left.svg';
-import LayersIcon from '@/assets/icons/levels.svg';
-import LocationIcon from '@/assets/icons/location.svg';
-import ClockIcon from '@/assets/icons/clock.svg';
-import ListIcon from '@/assets/icons/list.svg';
 
 type Props = {
   control: Control;
@@ -79,14 +78,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
         )}
         <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
         <ThemedView style={styles.cardContent}>
-          <ThemedView style={styles.cardHeader}>
-            <ThemedText style={styles.elementName}>{control.elementName}</ThemedText>
-            <View style={[styles.typeBadge, { borderColor: typeColor }]}>
-              <Text style={[styles.typeBadgeText, { color: typeColor }]}>
-                {ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ?? control.elementType}
-              </Text>
-            </View>
-          </ThemedView>
+          <ThemedText style={styles.elementName} numberOfLines={2}>{control.elementName}</ThemedText>
 
           <ThemedView style={styles.metaRow}>
             <ThemedView style={styles.metaChip}>
@@ -129,30 +121,35 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
               </>
             )}
           </ThemedView>
-          
-         <ThemedView style={styles.metaRow}>
-         <View style={styles.concreteBadge}>
-            <Text style={styles.concreteBadgeText}>
-              {control.concreateType.name}
-            </Text>
-          </View>
 
-          {control.validated_concrete && control.validated_concrete_at ? (
-            <View style={[styles.validationChip, styles.validationChipApproved]}>
-              <CheckmarkIcon width={11} height={11} color="#2e7d32" />
-              <Text style={[styles.validationChipText, { color: '#2e7d32' }]}>
-                היציקה אושרה
+          <View style={styles.badgesRow}>
+            <View style={[styles.typeBadge, { borderColor: typeColor }]}>
+              <Text style={[styles.typeBadgeText, { color: typeColor }]}>
+                {ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ?? control.elementType}
               </Text>
             </View>
-          ) : (
-            <View style={[styles.validationChip, styles.validationChipNotApproved]}>
-              <XmarkIcon width={11} height={11} color="#c62828" />
-              <Text style={[styles.validationChipText, { color: '#c62828' }]}>
-                היציקה לא אושרה
+            <View style={styles.concreteBadge}>
+              <Text style={styles.concreteBadgeText}>
+                {control.concreateType.name}
               </Text>
             </View>
-          )}
-         </ThemedView>
+
+            {control.validated_concrete && control.validated_concrete_at ? (
+              <View style={[styles.validationChip, styles.validationChipApproved]}>
+                <CheckmarkIcon width={11} height={11} color="#2e7d32" />
+                <Text style={[styles.validationChipText, { color: '#2e7d32' }]}>
+                  היציקה אושרה
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.validationChip, styles.validationChipNotApproved]}>
+                <XmarkIcon width={11} height={11} color="#c62828" />
+                <Text style={[styles.validationChipText, { color: '#c62828' }]}>
+                  היציקה לא אושרה
+                </Text>
+              </View>
+            )}
+          </View>
         </ThemedView>
 
       </ThemedView>
@@ -179,16 +176,14 @@ const styles = StyleSheet.create({
 
     paddingVertical: 14,
     gap: 6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   elementName: {
     fontSize: 16,
     fontWeight: '600',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    flexShrink: 1,
   },
   typeBadge: {
     paddingHorizontal: 8,
@@ -205,6 +200,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
+    alignSelf: 'stretch',
   },
   metaChip: {
     flexDirection: 'row',
@@ -220,8 +216,14 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: '#ccc',
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    alignSelf: 'stretch',
+  },
   concreteBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -240,8 +242,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,

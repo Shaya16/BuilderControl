@@ -22,6 +22,8 @@ import {
   Program,
 } from '@/types/project';
 
+import LeftIcon from '@/assets/icons/left.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
 import { ACCENT } from '@/constants/controls';
 import { StepWaterControl } from './step-airconditioncontrol';
 import { StepConcreteType } from './step-concrete-type';
@@ -37,8 +39,6 @@ import { StepIronControl } from './step-ironcontrol';
 import { StepOtherControl } from './step-othercontrol';
 import { StepPrograms } from './step-programs';
 import { styles } from './styles';
-import LeftIcon from '@/assets/icons/left.svg';
-import TrashIcon from '@/assets/icons/trash.svg';
 
 const TOTAL_STEPS = 8;
 const STEP_LABELS = ['פרטי האלמנט', 'תוכניות', 'בקרת ברזל', 'בקרת חשמל', 'בקרת אינסטלציה', 'בקרת מיזוג אוויר', 'בקרת שונות', 'בקרת יציקה'];
@@ -47,7 +47,6 @@ type Props = {
   visible: boolean;
   editingControl: Control | null;
   levels: Level[];
-  concreteTypes: ConcreteType[];
   latestPrograms: Program[];
   onSave: (data: {
     levelId: string;
@@ -68,7 +67,6 @@ type Props = {
     validatedConcrete: boolean;
     validatedConcreteAt?: string;
   }) => void;
-  onAddConcreteType: (name: string) => ConcreteType;
   onDelete: () => void;
   onClose: () => void;
 };
@@ -77,10 +75,8 @@ export function ControlModal({
   visible,
   editingControl,
   levels,
-  concreteTypes,
   latestPrograms,
   onSave,
-  onAddConcreteType,
   onDelete,
   onClose,
 }: Props) {
@@ -326,13 +322,11 @@ export function ControlModal({
       case 8:
         return (
           <StepConcreteType
-            concreteTypes={concreteTypes}
             value={concreteType}
             images={concreteControlImages}
             validatedConcrete={validatedConcrete}
             validatedConcreteAt={validatedConcreteAt}
             onChange={setConcreteType}
-            onAddConcreteType={onAddConcreteType}
             onChangeImages={setConcreteControlImages}
             onChangeValidatedConcrete={handleToggleValidatedConcrete}
           />
@@ -430,7 +424,16 @@ export function ControlModal({
           </View>
 
           {editingControl && (
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.deleteButton} onPress={() => {
+              Alert.alert(
+                'מחיקת בקרה',
+                'האם אתה בטוח שברצונך למחוק בקרה זו?',
+                [
+                  { text: 'ביטול', style: 'cancel' },
+                  { text: 'מחק', style: 'destructive', onPress: onDelete },
+                ]
+              );
+            }} activeOpacity={0.8}>
               <TrashIcon width={16} height={16} color="#fff" />
               <Text style={styles.deleteButtonText}>מחיקת בקרה</Text>
             </TouchableOpacity>
