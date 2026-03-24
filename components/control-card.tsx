@@ -2,7 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import {
   ACCENT,
   DEFAULT_ELEMENT_TYPE_COLOR,
@@ -11,6 +11,13 @@ import {
 } from '@/constants/controls';
 import { Colors } from '@/constants/theme';
 import { Control } from '@/types/project';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
+import LeftIcon from '@/assets/icons/left.svg';
+import LayersIcon from '@/assets/icons/levels.svg';
+import LocationIcon from '@/assets/icons/location.svg';
+import ClockIcon from '@/assets/icons/clock.svg';
+import ListIcon from '@/assets/icons/list.svg';
 
 type Props = {
   control: Control;
@@ -66,7 +73,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
         {selectionMode && (
           <View style={styles.checkboxWrap}>
             <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
-              {selected && <IconSymbol name="checkmark" size={12} color="#fff" />}
+              {selected && <CheckmarkIcon width={12} height={12} color="#fff" />}
             </View>
           </View>
         )}
@@ -83,7 +90,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
 
           <ThemedView style={styles.metaRow}>
             <ThemedView style={styles.metaChip}>
-              <IconSymbol name="square.2.layers.3d.fill" size={11} color={Colors[colorScheme].icon} />
+              <LayersIcon width={11} height={11} color={Colors[colorScheme].icon} />
               <ThemedText style={[styles.metaValue, { color: Colors[colorScheme].icon }]}>
                 {control.Level.name}
               </ThemedText>
@@ -92,7 +99,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
               <>
                 <View style={styles.metaDot} />
                 <ThemedView style={styles.metaChip}>
-                  <IconSymbol name="mappin" size={11} color={Colors[colorScheme].icon} />
+                  <LocationIcon width={11} height={11} color={Colors[colorScheme].icon} />
                   <ThemedText style={[styles.metaValue, { color: Colors[colorScheme].icon }]}>
                     {control.elementLocation}
                   </ThemedText>
@@ -103,7 +110,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
               <>
                 <View style={styles.metaDot} />
                 <ThemedView style={styles.metaChip}>
-                  <IconSymbol name="clock" size={10} color={Colors[colorScheme].icon} />
+                  <ClockIcon width={10} height={10} color={Colors[colorScheme].icon} />
                   <ThemedText style={[styles.metaValue, styles.timestampText, { color: Colors[colorScheme].icon }]}>
                     {timestampValue}
                   </ThemedText>
@@ -114,7 +121,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
               <>
                 <View style={styles.metaDot} />
                 <ThemedView style={styles.metaChip}>
-                  <IconSymbol name="list.bullet.rectangle.portrait.fill" size={11} color={Colors[colorScheme].icon} />
+                  <ListIcon width={11} height={11} color={Colors[colorScheme].icon} />
                   <ThemedText style={[styles.metaValue, { color: Colors[colorScheme].icon }]}>
                     {control.programs.length}
                   </ThemedText>
@@ -122,8 +129,9 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
               </>
             )}
           </ThemedView>
-
-          <View style={styles.concreteBadge}>
+          
+         <ThemedView style={styles.metaRow}>
+         <View style={styles.concreteBadge}>
             <Text style={styles.concreteBadgeText}>
               {control.concreateType.name}
             </Text>
@@ -131,21 +139,22 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
 
           {control.validated_concrete && control.validated_concrete_at ? (
             <View style={[styles.validationChip, styles.validationChipApproved]}>
-              <IconSymbol name="checkmark.seal.fill" size={11} color="#2e7d32" />
+              <CheckmarkIcon width={11} height={11} color="#2e7d32" />
               <Text style={[styles.validationChipText, { color: '#2e7d32' }]}>
                 היציקה אושרה
               </Text>
             </View>
           ) : (
             <View style={[styles.validationChip, styles.validationChipNotApproved]}>
-              <IconSymbol name="xmark.seal" size={11} color="#c62828" />
+              <XmarkIcon width={11} height={11} color="#c62828" />
               <Text style={[styles.validationChipText, { color: '#c62828' }]}>
                 היציקה לא אושרה
               </Text>
             </View>
           )}
+         </ThemedView>
         </ThemedView>
-        <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
+
       </ThemedView>
     </TouchableOpacity>
   );
@@ -167,7 +176,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   cardContent: {
-    flex: 1,
+
     paddingVertical: 14,
     gap: 6,
   },
@@ -224,6 +233,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#555',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   validationChip: {
     flexDirection: 'row',

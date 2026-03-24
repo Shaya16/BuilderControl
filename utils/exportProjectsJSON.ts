@@ -1,8 +1,12 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { Control, ControlImage, Program, Project } from '@/types/project';
+
+const EXPORT_IMAGE_MAX_WIDTH = 1200;
+const EXPORT_IMAGE_COMPRESS = 0.6;
 
 // ---------------------------------------------------------------------------
 // Base64 helpers
@@ -20,6 +24,23 @@ async function fileUriToBase64(uri: string): Promise<string> {
       const dest = `${cacheDir}json_img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
       await FileSystem.copyAsync({ from: uri, to: dest });
       localUri = dest;
+    }
+
+    try {
+      const result = await manipulateAsync(
+        localUri,
+        [{ resize: { width: EXPORT_IMAGE_MAX_WIDTH } }],
+        {
+          format: SaveFormat.JPEG,
+          compress: EXPORT_IMAGE_COMPRESS,
+          base64: true,
+        },
+      );
+      if (result.base64) {
+        return `data:image/jpeg;base64,${result.base64}`;
+      }
+    } catch (err) {
+      console.warn('[exportProjectsJSON] image compression failed, using original:', uri, err);
     }
 
     const base64 = await FileSystem.readAsStringAsync(localUri, {
@@ -76,9 +97,11 @@ async function convertControlImages(
   converter: (uri: string) => Promise<string>,
 ): Promise<ControlImage[] | undefined> {
   if (!images || images.length === 0) return images;
-  return Promise.all(
-    images.map(async (img) => ({ ...img, uri: await converter(img.uri) })),
-  );
+  const results: ControlImage[] = [];
+  for (const img of images) {
+    results.push({ ...img, uri: await converter(img.uri) });
+  }
+  return results;
 }
 
 async function convertPrograms(
@@ -86,45 +109,29 @@ async function convertPrograms(
   converter: (uri: string) => Promise<string>,
 ): Promise<Program[] | undefined> {
   if (!programs || programs.length === 0) return programs;
-  return Promise.all(
-    programs.map(async (p) => ({
+  const results: Program[] = [];
+  for (const p of programs) {
+    results.push({
       ...p,
       imageUri: p.imageUri ? await converter(p.imageUri) : undefined,
-    })),
-  );
+    });
+  }
+  return results;
 }
 
 async function convertControl(
   control: Control,
   converter: (uri: string) => Promise<string>,
 ): Promise<Control> {
-  const [
-    programs,
-    ironImages,
-    electricImages,
-    installationImages,
-    waterImages,
-    concreteImages,
-    otherImages,
-  ] = await Promise.all([
-    convertPrograms(control.programs, converter),
-    convertControlImages(control.IronControlImages, converter),
-    convertControlImages(control.ElectricalControlImages, converter),
-    convertControlImages(control.InstallationControlImages, converter),
-    convertControlImages(control.WaterControlImages, converter),
-    convertControlImages(control.ConcreteControlImages, converter),
-    convertControlImages(control.otherControlImages, converter),
-  ]);
-
   return {
     ...control,
-    programs: programs ?? control.programs,
-    IronControlImages: ironImages,
-    ElectricalControlImages: electricImages,
-    InstallationControlImages: installationImages,
-    WaterControlImages: waterImages,
-    ConcreteControlImages: concreteImages,
-    otherControlImages: otherImages,
+    programs: (await convertPrograms(control.programs, converter)) ?? control.programs,
+    IronControlImages: await convertControlImages(control.IronControlImages, converter),
+    ElectricalControlImages: await convertControlImages(control.ElectricalControlImages, converter),
+    InstallationControlImages: await convertControlImages(control.InstallationControlImages, converter),
+    WaterControlImages: await convertControlImages(control.WaterControlImages, converter),
+    ConcreteControlImages: await convertControlImages(control.ConcreteControlImages, converter),
+    otherControlImages: await convertControlImages(control.otherControlImages, converter),
   };
 }
 
@@ -132,20 +139,21 @@ async function convertProject(
   project: Project,
   converter: (uri: string) => Promise<string>,
 ): Promise<Project> {
-  const [logoUri, programs, controls] = await Promise.all([
-    project.logoUri ? converter(project.logoUri) : Promise.resolve(undefined),
-    convertPrograms(project.programs, converter),
-    project.controls
-      ? Promise.all(project.controls.map((c) => convertControl(c, converter)))
-      : Promise.resolve(undefined),
-  ]);
+  const logoUri = project.logoUri ? await converter(project.logoUri) : undefined;
+  const programs = await convertPrograms(project.programs, converter);
+  const controls = project.controls
+    ? await sequentialMap(project.controls, (c) => convertControl(c, converter))
+    : undefined;
 
-  return {
-    ...project,
-    logoUri,
-    programs,
-    controls,
-  };
+  return { ...project, logoUri, programs, controls };
+}
+
+async function sequentialMap<T, R>(arr: T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
+  for (const item of arr) {
+    results.push(await fn(item));
+  }
+  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -164,15 +172,15 @@ export async function exportProjectsToJSON(
     converted.push(await convertProject(projects[i], fileUriToBase64));
   }
 
-  const json = JSON.stringify(converted, null, 2);
-
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const filename = `projects_backup_${dateStr}.json`;
+  const json = JSON.stringify(converted);
 
   const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
   if (!cacheDir) throw new Error('No cache or document directory available');
 
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const filename = `projects_backup_${dateStr}.json`;
   const fileUri = `${cacheDir}${filename}`;
+
   await FileSystem.writeAsStringAsync(fileUri, json, {
     encoding: FileSystem.EncodingType.UTF8,
   });

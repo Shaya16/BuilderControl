@@ -2,11 +2,12 @@ import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } fro
 
 import * as ImagePicker from 'expo-image-picker';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT } from '@/constants/controls';
 import { ControlImage } from '@/types/project';
 
 import { styles } from './styles';
+import PlusIcon from '@/assets/icons/plus.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
 
 type Props = {
   images: ControlImage[];
@@ -66,7 +67,7 @@ export function StepOtherControl({ images, onChangeImages }: Props) {
         תמונות בקרת שונות{images.length > 0 ? `  ·  ${images.length}` : ''}
       </Text>
       <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
-        <IconSymbol name="plus" size={18} color={ACCENT} />
+        <PlusIcon width={18} height={18} color={ACCENT} />
         <Text style={localStyles.addBtnText}>הוסף תמונה</Text>
       </TouchableOpacity>
       {images.map((img, index) => (
@@ -85,7 +86,7 @@ export function StepOtherControl({ images, onChangeImages }: Props) {
             style={localStyles.removeBtn}
             onPress={() => removeImage(index)}
             activeOpacity={0.8}>
-            <IconSymbol name="xmark" size={10} color="#fff" />
+            <XmarkIcon width={10} height={10} color="#fff" />
           </TouchableOpacity>
         </View>
       ))}

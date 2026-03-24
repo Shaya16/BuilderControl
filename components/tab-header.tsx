@@ -4,9 +4,11 @@ import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import { ACCENT } from '@/constants/controls';
 import { Colors, Fonts } from '@/constants/theme';
+import RightIcon from '@/assets/icons/right.svg';
+import PlusIcon from '@/assets/icons/plus.svg';
 
 type Props = {
   backLabel: string;
@@ -25,7 +27,7 @@ export function TabHeader({ backLabel, title, projectName, showAddButton, onAddP
         style={styles.backButton}
         onPress={() => router.replace('/reset-to-root')}
         activeOpacity={0.7}>
-        <IconSymbol name="chevron.right" size={18} color={ACCENT} />
+        <RightIcon width={18} height={18} color={ACCENT} />
         <Text style={[styles.backButtonText, { color: ACCENT }]}>{backLabel}</Text>
       </TouchableOpacity>
       <ThemedView style={styles.titleContainer}>
@@ -41,7 +43,7 @@ export function TabHeader({ backLabel, title, projectName, showAddButton, onAddP
       </ThemedView>
       {showAddButton && (
         <TouchableOpacity style={styles.addButton} onPress={onAddPress} activeOpacity={0.8}>
-          <IconSymbol name="plus" size={18} color="#fff" />
+          <PlusIcon width={18} height={18} color="#fff" />
         </TouchableOpacity>
       )}
     </ThemedView>

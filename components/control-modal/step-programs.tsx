@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import { ACCENT } from '@/constants/controls';
 import { Program } from '@/types/project';
 
 import { styles } from './styles';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
 
 type Props = {
   latestPrograms: Program[];
@@ -50,7 +51,7 @@ export function StepPrograms({ latestPrograms, selectedIds, onToggle }: Props) {
                 onPress={() => onToggle(program.id)}
                 activeOpacity={0.7}>
                 <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
-                  {selected && <IconSymbol name="checkmark" size={12} color="#fff" />}
+                  {selected && <CheckmarkIcon width={12} height={12} color="#fff" />}
                 </View>
                 <View style={styles.programInfo}>
                   <Text style={[styles.programRowName, selected && { color: ACCENT }]}>

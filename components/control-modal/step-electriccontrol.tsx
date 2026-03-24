@@ -2,11 +2,13 @@ import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } fro
 
 import * as ImagePicker from 'expo-image-picker';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT } from '@/constants/controls';
 import { ControlImage } from '@/types/project';
 
 import { styles } from './styles';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import PlusIcon from '@/assets/icons/plus.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
 
 type Props = {
   images: ControlImage[];
@@ -74,7 +76,7 @@ export function StepElectricControl({
         onPress={() => onChangeNeeded(!needed)}
         activeOpacity={0.7}>
         <View style={[styles.checkbox, !needed && styles.checkboxChecked]}>
-          {!needed && <IconSymbol name="checkmark" size={12} color="#fff" />}
+          {!needed && <CheckmarkIcon width={12} height={12} color="#fff" />}
         </View>
         <Text style={localStyles.notNeededText}>לא נדרש עבור אלמנט זה</Text>
       </TouchableOpacity>
@@ -85,7 +87,7 @@ export function StepElectricControl({
             תמונות בקרת חשמל{images.length > 0 ? `  ·  ${images.length}` : ''}
           </Text>
           <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
-            <IconSymbol name="plus" size={18} color={ACCENT} />
+            <PlusIcon width={18} height={18} color={ACCENT} />
             <Text style={localStyles.addBtnText}>הוסף תמונה</Text>
           </TouchableOpacity>
           {images.map((img, index) => (
@@ -104,7 +106,7 @@ export function StepElectricControl({
                 style={localStyles.removeBtn}
                 onPress={() => removeImage(index)}
                 activeOpacity={0.8}>
-                <IconSymbol name="xmark" size={10} color="#fff" />
+                <XmarkIcon width={10} height={10} color="#fff" />
               </TouchableOpacity>
             </View>
           ))}

@@ -3,11 +3,13 @@ import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } fro
 
 import * as ImagePicker from 'expo-image-picker';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ACCENT } from '@/constants/controls';
 import { ConcreteType, ControlImage } from '@/types/project';
 
 import { styles } from './styles';
+import PlusIcon from '@/assets/icons/plus.svg';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
 
 type Props = {
   concreteTypes: ConcreteType[];
@@ -105,7 +107,7 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
             onPress={() => setShowOtherInput((prev) => !prev)}
             activeOpacity={0.7}>
             <View style={localStyles.otherChipContent}>
-              <IconSymbol name="plus" size={14} color={showOtherInput ? '#fff' : ACCENT} />
+              <PlusIcon width={14} height={14} color={showOtherInput ? '#fff' : ACCENT} />
               <Text style={[styles.chipText, { color: showOtherInput ? '#fff' : ACCENT }]}>
                 אחר
               </Text>
@@ -141,7 +143,7 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
           onPress={() => onChangeValidatedConcrete(!validatedConcrete)}
           activeOpacity={0.7}>
           <View style={[localStyles.checkbox, validatedConcrete && localStyles.checkboxChecked]}>
-            {validatedConcrete && <IconSymbol name="checkmark" size={14} color="#fff" />}
+            {validatedConcrete && <CheckmarkIcon width={14} height={14} color="#fff" />}
           </View>
           <Text style={localStyles.checkboxLabel}>אישור יציקה </Text>
         </TouchableOpacity>
@@ -156,7 +158,7 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
         תמונות בקרת בטון{images.length > 0 ? `  ·  ${images.length}` : ''}
       </Text>
       <TouchableOpacity style={localStyles.addBtn} onPress={pickImage} activeOpacity={0.7}>
-        <IconSymbol name="plus" size={18} color={ACCENT} />
+        <PlusIcon width={18} height={18} color={ACCENT} />
         <Text style={localStyles.addBtnText}>הוסף תמונה</Text>
       </TouchableOpacity>
       {images.map((img, index) => (
@@ -175,7 +177,7 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
             style={localStyles.removeBtn}
             onPress={() => removeImage(index)}
             activeOpacity={0.8}>
-            <IconSymbol name="xmark" size={10} color="#fff" />
+            <XmarkIcon width={10} height={10} color="#fff" />
           </TouchableOpacity>
         </View>
       ))}

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
+
 import {
   ConcreteType,
   Control,
@@ -37,6 +37,8 @@ import { StepIronControl } from './step-ironcontrol';
 import { StepOtherControl } from './step-othercontrol';
 import { StepPrograms } from './step-programs';
 import { styles } from './styles';
+import LeftIcon from '@/assets/icons/left.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
 
 const TOTAL_STEPS = 8;
 const STEP_LABELS = ['פרטי האלמנט', 'תוכניות', 'בקרת ברזל', 'בקרת חשמל', 'בקרת אינסטלציה', 'בקרת מיזוג אוויר', 'בקרת שונות', 'בקרת יציקה'];
@@ -378,7 +380,7 @@ export function ControlModal({
                   onPress={() => setStep(TOTAL_STEPS)}
                   activeOpacity={0.8}>
                   <Text style={styles.jumpToLastButtonText}>שלב אחרון</Text>
-                  <IconSymbol name="chevron.left" size={14} color={ACCENT} />
+                  <LeftIcon width={14} height={14} color={ACCENT} />  
                 </TouchableOpacity>
               )}
             </View>
@@ -408,7 +410,7 @@ export function ControlModal({
                 disabled={!canProceed}
                 activeOpacity={0.8}>
                 <Text style={styles.nextButtonText}>הבא</Text>
-                <IconSymbol name="chevron.left" size={16} color="#fff" />
+                <LeftIcon width={16} height={16} color="#fff" />
               </TouchableOpacity>
             )}
 
@@ -429,7 +431,7 @@ export function ControlModal({
 
           {editingControl && (
             <TouchableOpacity style={styles.deleteButton} onPress={onDelete} activeOpacity={0.8}>
-              <IconSymbol name="trash" size={16} color="#fff" />
+              <TrashIcon width={16} height={16} color="#fff" />
               <Text style={styles.deleteButtonText}>מחיקת בקרה</Text>
             </TouchableOpacity>
           )}
