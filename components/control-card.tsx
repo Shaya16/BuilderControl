@@ -72,14 +72,7 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
         )}
         <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
         <ThemedView style={styles.cardContent}>
-          <ThemedView style={styles.cardHeader}>
-            <ThemedText style={styles.elementName}>{control.elementName}</ThemedText>
-            <View style={[styles.typeBadge, { borderColor: typeColor }]}>
-              <Text style={[styles.typeBadgeText, { color: typeColor }]}>
-                {ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ?? control.elementType}
-              </Text>
-            </View>
-          </ThemedView>
+          <ThemedText style={styles.elementName} numberOfLines={2}>{control.elementName}</ThemedText>
 
           <ThemedView style={styles.metaRow}>
             <ThemedView style={styles.metaChip}>
@@ -123,27 +116,34 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
             )}
           </ThemedView>
 
-          <View style={styles.concreteBadge}>
-            <Text style={styles.concreteBadgeText}>
-              {control.concreateType.name}
-            </Text>
-          </View>
+          <View style={styles.badgesRow}>
+            <View style={[styles.typeBadge, { borderColor: typeColor }]}>
+              <Text style={[styles.typeBadgeText, { color: typeColor }]}>
+                {ELEMENT_TYPE_LABELS[control.elementType as keyof typeof ELEMENT_TYPE_LABELS] ?? control.elementType}
+              </Text>
+            </View>
+            <View style={styles.concreteBadge}>
+              <Text style={styles.concreteBadgeText}>
+                {control.concreateType.name}
+              </Text>
+            </View>
 
-          {control.validated_concrete && control.validated_concrete_at ? (
-            <View style={[styles.validationChip, styles.validationChipApproved]}>
-              <IconSymbol name="checkmark.seal.fill" size={11} color="#2e7d32" />
-              <Text style={[styles.validationChipText, { color: '#2e7d32' }]}>
-                היציקה אושרה
-              </Text>
-            </View>
-          ) : (
-            <View style={[styles.validationChip, styles.validationChipNotApproved]}>
-              <IconSymbol name="xmark.seal" size={11} color="#c62828" />
-              <Text style={[styles.validationChipText, { color: '#c62828' }]}>
-                היציקה לא אושרה
-              </Text>
-            </View>
-          )}
+            {control.validated_concrete && control.validated_concrete_at ? (
+              <View style={[styles.validationChip, styles.validationChipApproved]}>
+                <IconSymbol name="checkmark.seal.fill" size={11} color="#2e7d32" />
+                <Text style={[styles.validationChipText, { color: '#2e7d32' }]}>
+                  היציקה אושרה
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.validationChip, styles.validationChipNotApproved]}>
+                <IconSymbol name="xmark.seal" size={11} color="#c62828" />
+                <Text style={[styles.validationChipText, { color: '#c62828' }]}>
+                  היציקה לא אושרה
+                </Text>
+              </View>
+            )}
+          </View>
         </ThemedView>
         <IconSymbol name="chevron.left" size={16} color={Colors[colorScheme].icon} />
       </ThemedView>
@@ -170,16 +170,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     gap: 6,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
   elementName: {
     fontSize: 16,
     fontWeight: '600',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    flexShrink: 1,
   },
   typeBadge: {
     paddingHorizontal: 8,
@@ -196,6 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
+    alignSelf: 'stretch',
   },
   metaChip: {
     flexDirection: 'row',
@@ -211,8 +210,14 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: '#ccc',
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    alignSelf: 'stretch',
+  },
   concreteBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -229,8 +234,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,

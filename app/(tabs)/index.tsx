@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -218,32 +219,51 @@ export default function ControlsScreen() {
     setBatchExporting(true);
     setExportProgress({ current: 0, total: selected.length });
 
-    const generatedPaths: string[] = [];
+    const savedPaths: string[] = [];
     try {
+      const exportsDir = `${FileSystem.documentDirectory}exports/`;
+      const dirInfo = await FileSystem.getInfoAsync(exportsDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(exportsDir, { intermediates: true });
+      }
+
       for (let i = 0; i < selected.length; i++) {
         setExportProgress({ current: i + 1, total: selected.length });
         const filePath = await generateControlPDFFile(selected[i], {
           logoUri: project.logoUri,
         });
-        generatedPaths.push(filePath);
+        const fileName = filePath.split('/').pop() ?? `control_${i}.pdf`;
+        const destPath = `${exportsDir}${fileName}`;
+        await FileSystem.copyAsync({ from: filePath, to: destPath });
+        savedPaths.push(destPath);
       }
+
+      setBatchExporting(false);
+      setExportProgress({ current: 0, total: 0 });
+      handleExitSelectionMode();
 
       const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert('שגיאה', 'שיתוף לא זמין במכשיר זה');
-        return;
-      }
-
-      for (const path of generatedPaths) {
-        await Sharing.shareAsync(path, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'ייצוא דוחות בקרה',
-          UTI: 'com.adobe.pdf',
-        });
-      }
+      Alert.alert(
+        'הייצוא הושלם',
+        `${savedPaths.length} קבצי PDF נשמרו.\n\nניתן למצוא אותם ב:\nקבצים > במכשיר שלי > BuildControl > exports`,
+        [
+          { text: 'סיום', style: 'cancel' },
+          ...(canShare ? [{
+            text: 'שתף',
+            onPress: async () => {
+              for (const path of savedPaths) {
+                await Sharing.shareAsync(path, {
+                  mimeType: 'application/pdf',
+                  dialogTitle: 'ייצוא דוחות בקרה',
+                  UTI: 'com.adobe.pdf',
+                });
+              }
+            },
+          }] : []),
+        ]
+      );
     } catch {
       Alert.alert('שגיאה', 'לא ניתן היה לייצא את הדוחות. אנא נסה שוב.');
-    } finally {
       setBatchExporting(false);
       setExportProgress({ current: 0, total: 0 });
       handleExitSelectionMode();
@@ -263,7 +283,6 @@ export default function ControlsScreen() {
       return dateB.localeCompare(dateA);
     });
   const levels = project?.levels ?? [];
-  const concreteTypes = project?.concreteTypes ?? [];
   const latestPrograms = (project?.programs ?? []).filter((p) => p.latestVersion);
 
   return (
@@ -373,16 +392,8 @@ export default function ControlsScreen() {
         visible={modalVisible}
         editingControl={editingControl}
         levels={levels}
-        concreteTypes={concreteTypes}
         latestPrograms={latestPrograms}
         onSave={handleSave}
-        onAddConcreteType={(name: string) => {
-          const newType: ConcreteType = { id: Date.now().toString(), name };
-          if (project) {
-            saveProject({ ...project, concreteTypes: [...(project.concreteTypes ?? []), newType] });
-          }
-          return newType;
-        }}
         onDelete={handleDelete}
         onClose={handleCloseModal}
       />

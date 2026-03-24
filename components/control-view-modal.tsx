@@ -33,6 +33,7 @@ import ClockIcon from '@/assets/icons/clock.svg';
 import CheckmarkIcon from '@/assets/icons/checkmark.svg';
 import DownloadIcon from '@/assets/icons/download.svg';
 import PencilIcon from '@/assets/icons/pencil.svg';
+import PhotoIcon from '@/assets/icons/photo.svg';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -114,7 +115,7 @@ export function ControlViewModal({ visible, control, projectLogoUri, onClose, on
               {displayControl.elementName}
             </Text>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7} hitSlop={12}>
-              <XmarkIcon width={16} height={16} color="#888" />
+              <XmarkIcon width={16} height={16} fill="#888" />
 
             </TouchableOpacity>
           </View>
@@ -124,19 +125,19 @@ export function ControlViewModal({ visible, control, projectLogoUri, onClose, on
               <Text style={[viewStyles.typeBadgeText, { color: typeColor }]}>{typeLabel}</Text>
             </View>
             <View style={viewStyles.chip}>
-              <LayersIcon width={11} height={11} color="#888" />
+              <LayersIcon width={11} height={11} fill="#888" />
               <Text style={viewStyles.chipText}>{displayControl.Level.name}</Text>
             </View>
             {!!displayControl.elementLocation && (
               <View style={viewStyles.chip}>
-                <LocationIcon width={11} height={11} color="#888" />
+                <LocationIcon width={11} height={11} fill="#888" />
                 <Text style={viewStyles.chipLabel}>מיקום:</Text>
                 <Text style={viewStyles.chipText}>{displayControl.elementLocation}</Text>
               </View>
             )}
             {!!(displayControl.createdAt || displayControl.updatedAt) && (
               <View style={viewStyles.chip}>
-                <ClockIcon width={11} height={11} color="#888" />
+                <ClockIcon width={11} height={11} fill="#888" />
                 <Text style={viewStyles.chipText}>
                   {formatDate(displayControl.updatedAt ?? displayControl.createdAt!)}
                 </Text>
@@ -148,14 +149,14 @@ export function ControlViewModal({ visible, control, projectLogoUri, onClose, on
             </View>
             {displayControl.validated_concrete && displayControl.validated_concrete_at ? (
               <View style={[viewStyles.chip, viewStyles.validatedChip]}>
-                <CheckmarkIcon width={12} height={12} color="#2e7d32" />
+                <CheckmarkIcon width={12} height={12} fill="#2e7d32" />
                 <Text style={[viewStyles.chipText, { color: '#2e7d32' }]}>
                   היציקה אושרה ב{new Date(displayControl.validated_concrete_at).toLocaleDateString('he-IL')} בשעה {new Date(displayControl.validated_concrete_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </View>
             ) : (
               <View style={[viewStyles.chip, viewStyles.notValidatedChip]}>
-                <XmarkIcon width={12} height={12} color="#c62828" />
+                <XmarkIcon width={12} height={12} fill="#c62828" />
                 <Text style={[viewStyles.chipText, { color: '#c62828' }]}>היציקה לא אושרה</Text>
               </View>
             )}
@@ -189,7 +190,7 @@ export function ControlViewModal({ visible, control, projectLogoUri, onClose, on
                           if (available) await Sharing.shareAsync(p.imageUri!);
                         }}
                         activeOpacity={0.8}>
-                        <DownloadIcon width={18} height={18} color="#fff" />
+                        <DownloadIcon width={18} height={18} fill="#fff" />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -278,7 +279,7 @@ export function ControlViewModal({ visible, control, projectLogoUri, onClose, on
         {/* ── Footer ── */}
         <View style={viewStyles.footer}>
           <TouchableOpacity style={viewStyles.editButton} onPress={onEdit} activeOpacity={0.8}>
-            <PencilIcon width={16} height={16} color="#fff" />
+            <PencilIcon width={16} height={16} fill="#fff" />
             <Text style={viewStyles.editButtonText}>עריכה</Text>
           </TouchableOpacity>
 
@@ -290,7 +291,7 @@ export function ControlViewModal({ visible, control, projectLogoUri, onClose, on
             {exporting ? (
               <ActivityIndicator size="small" color={ACCENT} />
             ) : (
-              <DownloadIcon width={16} height={16} color={ACCENT} />
+              <DownloadIcon width={16} height={16} fill={ACCENT} />
             )}
             <Text style={viewStyles.exportButtonText}>
               {exporting ? 'טוען...' : 'ייצא PDF'}
@@ -334,7 +335,22 @@ function Section({ title, count, badge, children, style }: SectionProps) {
   );
 }
 
+function ImagePreviewModal({ uri, onClose }: { uri: string; onClose: () => void }) {
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={viewStyles.previewOverlay}>
+        <TouchableOpacity style={viewStyles.previewClose} onPress={onClose} activeOpacity={0.8}>
+          <XmarkIcon width={18} height={18} fill="#fff" />
+        </TouchableOpacity>
+        <Image source={{ uri }} style={viewStyles.previewImage} resizeMode="contain" />
+      </View>
+    </Modal>
+  );
+}
+
 function ImageList({ images }: { images?: ControlImage[] }) {
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+
   if (!images || images.length === 0) {
     return <Text style={viewStyles.emptyHint}>אין תמונות</Text>;
   }
@@ -349,24 +365,35 @@ function ImageList({ images }: { images?: ControlImage[] }) {
   };
 
   return (
-    <View style={viewStyles.imageList}>
-      {images.map((img, index) => (
-        <View key={`${img.uri}-${index}`} style={viewStyles.imageCard}>
-          <View style={viewStyles.imageWrapper}>
-            <Image source={{ uri: img.uri }} style={viewStyles.imageThumb} resizeMode="cover" />
-            <TouchableOpacity
-              style={viewStyles.downloadBtn}
-              onPress={() => handleDownload(img.uri)}
-              activeOpacity={0.8}>
-              <DownloadIcon width={18} height={18} color="#fff" />
-            </TouchableOpacity>
+    <>
+      {previewUri && <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />}
+      <View style={viewStyles.imageList}>
+        {images.map((img, index) => (
+          <View key={`${img.uri}-${index}`} style={viewStyles.imageCard}>
+            <View style={viewStyles.imageWrapper}>
+              <Image source={{ uri: img.uri }} style={viewStyles.imageThumb} resizeMode="cover" />
+              <View style={viewStyles.imageBtnRow}>
+                <TouchableOpacity
+                  style={viewStyles.imageActionBtn}
+                  onPress={() => setPreviewUri(img.uri)}
+                  activeOpacity={0.8}>
+                  <PhotoIcon width={18} height={18} fill="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={viewStyles.imageActionBtn}
+                  onPress={() => handleDownload(img.uri)}
+                  activeOpacity={0.8}>
+                  <DownloadIcon width={18} height={18} fill="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            {!!img.description && (
+              <Text style={viewStyles.imageDesc}>{img.description}</Text>
+            )}
           </View>
-          {!!img.description && (
-            <Text style={viewStyles.imageDesc}>{img.description}</Text>
-          )}
-        </View>
-      ))}
-    </View>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -564,6 +591,7 @@ const viewStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
     direction: 'ltr',
+    flexWrap: 'wrap',
   },
   programImageWrap: {
     width: '100%',
@@ -601,6 +629,7 @@ const viewStyles = StyleSheet.create({
     color: '#888',
     writingDirection: 'rtl',
     textAlign: 'right',
+    flexShrink: 1,
   },
   imageList: {
     gap: 8,
@@ -631,6 +660,37 @@ const viewStyles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 8,
     padding: 7,
+  },
+  imageBtnRow: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  imageActionBtn: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 8,
+    padding: 7,
+  },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: '80%',
+  },
+  previewClose: {
+    position: 'absolute',
+    top: 52,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    padding: 10,
   },
   imageDesc: {
     flex: 1,

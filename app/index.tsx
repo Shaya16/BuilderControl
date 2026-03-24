@@ -28,12 +28,14 @@ import PlusIcon from '@/assets/icons/plus.svg';
 import LeftIcon from '@/assets/icons/left.svg';
 import DownloadIcon from '@/assets/icons/download.svg';
 import ArrowTriangleIcon from '@/assets/icons/arrow_triangle.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
 import { ACCENT, STORAGE_KEY } from '@/constants/controls';
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState('');
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [jsonBusy, setJsonBusy] = useState(false);
   const [jsonProgress, setJsonProgress] = useState({ label: '', current: 0, total: 0 });
   const colorScheme = useColorScheme() ?? 'light';
@@ -66,6 +68,21 @@ export default function ProjectsScreen() {
 
   const handleSelectProject = (project: Project) => {
     router.push({ pathname: '/(tabs)', params: { projectId: project.id } });
+  };
+
+  const handleDeleteProject = (project: Project) => {
+    Alert.alert(
+      'מחיקת פרויקט',
+      `האם אתה בטוח שברצונך למחוק את "${project.name}"?`,
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'מחק',
+          style: 'destructive',
+          onPress: () => setProjects((prev) => prev.filter((p) => p.id !== project.id)),
+        },
+      ]
+    );
   };
 
   const handleExportJSON = async () => {
@@ -274,66 +291,91 @@ export default function ProjectsScreen() {
             </ThemedView>
           ) : (
             <ThemedView style={styles.listContainer}>
-              {projects.map((project) => (
-                <TouchableOpacity
-                  key={project.id}
-                  onPress={() => handleSelectProject(project)}
-                  activeOpacity={0.82}>
-                  <ThemedView
-                    style={[
-                      styles.projectCard,
-                      {
-                        backgroundColor:
-                          colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
-                        borderColor:
-                          colorScheme === 'dark'
-                            ? 'rgba(255,255,255,0.06)'
-                            : 'rgba(17,24,28,0.08)',
-                      },
-                    ]}>
-                    <View style={styles.projectMain}>
-                      <View
-                        style={[
-                          styles.folderIconWrap,
-                          {
-                            backgroundColor:
-                              colorScheme === 'dark'
-                                ? 'rgba(255,106,6,0.18)'
-                                : 'rgba(255,106,6,0.10)',
-                          },
-                        ]}>
-                        <FolderIcon width={20} height={20} fill={ACCENT} />
-                      </View>
-  
-                      <View style={styles.projectTextWrap}>
-                        <ThemedText style={styles.projectName} numberOfLines={1}>
-                          {project.name}
-                        </ThemedText>
-                        <Text
-                          style={[
-                            styles.projectMeta,
-                            { color: Colors[colorScheme].icon },
-                          ]}>
-                          לחץ לפתיחת הפרויקט
-                        </Text>
-                      </View>
-                    </View>
-  
-                    <View
+              {projects.map((project) => {
+                const isDeleting = deletingProjectId === project.id;
+                return (
+                  <TouchableOpacity
+                    key={project.id}
+                    onPress={() => {
+                      if (isDeleting) {
+                        setDeletingProjectId(null);
+                      } else {
+                        handleSelectProject(project);
+                      }
+                    }}
+                    onLongPress={() => setDeletingProjectId(project.id)}
+                    delayLongPress={500}
+                    activeOpacity={0.82}>
+                    <ThemedView
                       style={[
-                        styles.chevronWrap,
+                        styles.projectCard,
                         {
                           backgroundColor:
-                            colorScheme === 'dark'
-                              ? 'rgba(255,255,255,0.05)'
-                              : '#F4F7F8',
+                            colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                          borderColor: isDeleting
+                            ? '#E53935'
+                            : colorScheme === 'dark'
+                              ? 'rgba(255,255,255,0.06)'
+                              : 'rgba(17,24,28,0.08)',
                         },
                       ]}>
-                      <LeftIcon width={16} height={16} fill={Colors[colorScheme].icon} />
-                    </View>
-                  </ThemedView>
-                </TouchableOpacity>
-              ))}
+                      <View style={styles.projectMain}>
+                        <View
+                          style={[
+                            styles.folderIconWrap,
+                            {
+                              backgroundColor:
+                                colorScheme === 'dark'
+                                  ? 'rgba(255,106,6,0.18)'
+                                  : 'rgba(255,106,6,0.10)',
+                            },
+                          ]}>
+                          <FolderIcon width={20} height={20} fill={ACCENT} />
+                        </View>
+
+                        <View style={styles.projectTextWrap}>
+                          <ThemedText style={styles.projectName} numberOfLines={1}>
+                            {project.name}
+                          </ThemedText>
+                          <Text
+                            style={[
+                              styles.projectMeta,
+                              { color: isDeleting ? '#E53935' : Colors[colorScheme].icon },
+                            ]}>
+                            {isDeleting ? 'לחץ על הפח למחיקה' : 'לחץ לפתיחת הפרויקט'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {isDeleting ? (
+                        <TouchableOpacity
+                          style={styles.deleteIconWrap}
+                          onPress={() => {
+                            setDeletingProjectId(null);
+                            handleDeleteProject(project);
+                          }}
+                          activeOpacity={0.8}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <TrashIcon width={20} height={20} fill="#E53935" />
+                        </TouchableOpacity>
+                      ) : (
+                        <View
+                          style={[
+                            styles.chevronWrap,
+                            {
+                              backgroundColor:
+                                colorScheme === 'dark'
+                                  ? 'rgba(255,255,255,0.05)'
+                                  : '#F4F7F8',
+                            },
+                          ]}>
+                          <LeftIcon width={16} height={16} fill={Colors[colorScheme].icon} />
+                        </View>
+                      )}
+                    </ThemedView>
+                  </TouchableOpacity>
+                );
+              })}
             </ThemedView>
           )}
         </ThemedView>
@@ -629,6 +671,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  deleteIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    backgroundColor: 'rgba(229,57,53,0.1)',
   },
 
   fab: {

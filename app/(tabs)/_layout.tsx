@@ -47,7 +47,7 @@ export default function TabLayout() {
         name="concrete"
         options={{
           title: 'בטון',
-          href: concreteHref,
+          href: null,
           tabBarIcon: ({ color }) => <ConcreteIcon width={28} height={28} fill={color} />,
         }}
       />

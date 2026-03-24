@@ -199,8 +199,12 @@ export default function ProgramsScreen() {
   };
 
   const programs = project?.programs ?? [];
-  const filteredPrograms = searchQuery.trim()
-    ? programs.filter((p) => p.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+  const q = searchQuery.trim().toLowerCase();
+  const filteredPrograms = q
+    ? programs.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.number.toLowerCase().includes(q)
+      )
     : programs;
   const isFormValid = form.name.trim().length > 0;
 
@@ -225,7 +229,7 @@ export default function ProgramsScreen() {
             <View style={styles.searchInputWrapper}>
               <TextInput
                 style={[styles.searchInput, { color: Colors[colorScheme].text }]}
-                placeholder="חפש תוכנית לפי שם..."
+                placeholder="חפש לפי שם או מס׳..."
                 placeholderTextColor={Colors[colorScheme].icon}
                 value={searchQuery}
                 onChangeText={setSearchQuery}

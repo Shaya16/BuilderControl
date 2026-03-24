@@ -15,15 +15,18 @@ type Props = {
 
 export function StepPrograms({ latestPrograms, selectedIds, onToggle }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
+  const q = searchQuery.trim().toLowerCase();
   const filteredPrograms = latestPrograms.filter((program) =>
-    program.number.toLowerCase().includes(searchQuery.trim().toLowerCase())
+    !q ||
+    program.number.toLowerCase().includes(q) ||
+    program.name.toLowerCase().includes(q)
   );
 
   return (
     <View style={styles.stepBody}>
       <TextInput
         style={[styles.input, { backgroundColor: '#fafafa' }]}
-        placeholder="חפש לפי מס׳..."
+        placeholder="חפש לפי שם או מס׳..."
         placeholderTextColor="#999"
         value={searchQuery}
         onChangeText={setSearchQuery}

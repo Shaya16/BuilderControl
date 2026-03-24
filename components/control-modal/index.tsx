@@ -45,7 +45,6 @@ type Props = {
   visible: boolean;
   editingControl: Control | null;
   levels: Level[];
-  concreteTypes: ConcreteType[];
   latestPrograms: Program[];
   onSave: (data: {
     levelId: string;
@@ -66,7 +65,6 @@ type Props = {
     validatedConcrete: boolean;
     validatedConcreteAt?: string;
   }) => void;
-  onAddConcreteType: (name: string) => ConcreteType;
   onDelete: () => void;
   onClose: () => void;
 };
@@ -75,10 +73,8 @@ export function ControlModal({
   visible,
   editingControl,
   levels,
-  concreteTypes,
   latestPrograms,
   onSave,
-  onAddConcreteType,
   onDelete,
   onClose,
 }: Props) {
@@ -324,13 +320,11 @@ export function ControlModal({
       case 8:
         return (
           <StepConcreteType
-            concreteTypes={concreteTypes}
             value={concreteType}
             images={concreteControlImages}
             validatedConcrete={validatedConcrete}
             validatedConcreteAt={validatedConcreteAt}
             onChange={setConcreteType}
-            onAddConcreteType={onAddConcreteType}
             onChangeImages={setConcreteControlImages}
             onChangeValidatedConcrete={handleToggleValidatedConcrete}
           />
@@ -428,7 +422,16 @@ export function ControlModal({
           </View>
 
           {editingControl && (
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.deleteButton} onPress={() => {
+              Alert.alert(
+                'מחיקת בקרה',
+                'האם אתה בטוח שברצונך למחוק בקרה זו?',
+                [
+                  { text: 'ביטול', style: 'cancel' },
+                  { text: 'מחק', style: 'destructive', onPress: onDelete },
+                ]
+              );
+            }} activeOpacity={0.8}>
               <IconSymbol name="trash" size={16} color="#fff" />
               <Text style={styles.deleteButtonText}>מחיקת בקרה</Text>
             </TouchableOpacity>

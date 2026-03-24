@@ -9,21 +9,29 @@ import { ConcreteType, ControlImage } from '@/types/project';
 
 import { styles } from './styles';
 
+const CONCRETE_TYPES: ConcreteType[] = [
+  { id: 'b-15', name: 'B-15' },
+  { id: 'b-20', name: 'B-20' },
+  { id: 'b-25', name: 'B-25' },
+  { id: 'b-30', name: 'B-30' },
+  { id: 'b-40', name: 'B-40' },
+  { id: 'b-50', name: 'B-50' },
+];
+
 type Props = {
-  concreteTypes: ConcreteType[];
   value: ConcreteType | null;
   images: ControlImage[];
   validatedConcrete: boolean;
   validatedConcreteAt?: string;
   onChange: (type: ConcreteType) => void;
-  onAddConcreteType: (name: string) => ConcreteType;
   onChangeImages: (images: ControlImage[]) => void;
   onChangeValidatedConcrete: (validated: boolean) => void;
 };
 
-export function StepConcreteType({ concreteTypes, value, images, validatedConcrete, validatedConcreteAt, onChange, onAddConcreteType, onChangeImages, onChangeValidatedConcrete }: Props) {
-  const [showOtherInput, setShowOtherInput] = useState(false);
-  const [otherName, setOtherName] = useState('');
+export function StepConcreteType({ value, images, validatedConcrete, validatedConcreteAt, onChange, onChangeImages, onChangeValidatedConcrete }: Props) {
+  const isOtherSelected = value !== null && !CONCRETE_TYPES.some((ct) => ct.id === value.id);
+  const [showOtherInput, setShowOtherInput] = useState(isOtherSelected);
+  const [otherName, setOtherName] = useState(isOtherSelected ? value?.name ?? '' : '');
   const pickImage = () => {
     Alert.alert('הוסף תמונה', 'בחר מקור', [
       {
@@ -75,9 +83,7 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
   const handleConfirmOther = () => {
     const trimmed = otherName.trim();
     if (!trimmed) return;
-    const newType = onAddConcreteType(trimmed);
-    onChange(newType);
-    setOtherName('');
+    onChange({ id: 'other', name: trimmed });
     setShowOtherInput(false);
   };
 
@@ -86,12 +92,13 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
       <View style={styles.fieldGroup}>
         <Text style={styles.fieldLabel}>סוג בטון</Text>
         <View style={styles.chipGrid}>
-          {concreteTypes.map((ct) => (
+          {CONCRETE_TYPES.map((ct) => (
             <TouchableOpacity
               key={ct.id}
               style={[styles.chip, styles.chipWide, isSelected(ct) && styles.chipSelected]}
               onPress={() => {
                 setShowOtherInput(false);
+                setOtherName('');
                 onChange(ct);
               }}
               activeOpacity={0.7}>
@@ -117,20 +124,17 @@ export function StepConcreteType({ concreteTypes, value, images, validatedConcre
             <TextInput
               style={[styles.input, localStyles.otherInput]}
               value={otherName}
-              onChangeText={setOtherName}
+              onChangeText={(text) => {
+                setOtherName(text);
+                if (text.trim()) {
+                  onChange({ id: 'other', name: text.trim() });
+                }
+              }}
               placeholder="שם סוג בטון חדש..."
               placeholderTextColor="#aaa"
               autoFocus
               returnKeyType="done"
-              onSubmitEditing={handleConfirmOther}
             />
-            <TouchableOpacity
-              style={[localStyles.otherConfirmBtn, !otherName.trim() && localStyles.otherConfirmBtnDisabled]}
-              onPress={handleConfirmOther}
-              disabled={!otherName.trim()}
-              activeOpacity={0.8}>
-              <Text style={localStyles.otherConfirmBtnText}>הוסף</Text>
-            </TouchableOpacity>
           </View>
         )}
       </View>
