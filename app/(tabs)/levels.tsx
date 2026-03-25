@@ -23,11 +23,11 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { Level, Project } from '@/types/project';
 
-import { ACCENT } from '@/constants/controls';
+import LeftIcon from '@/assets/icons/left.svg';
 import LayersIcon from '@/assets/icons/levels.svg';
 import PlusIcon from '@/assets/icons/plus.svg';
-import LeftIcon from '@/assets/icons/left.svg';
 import TrashIcon from '@/assets/icons/trash.svg';
+import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
 export default function LevelsScreen() {
@@ -270,12 +270,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#ccc',
+    direction: 'rtl',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+
   },
   levelCardContent: {
-    justifyContent: 'space-between',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
     gap: 4,
-    writingDirection: 'rtl',
-    textAlign: 'right',
   },
   levelName: {
     fontSize: 16,

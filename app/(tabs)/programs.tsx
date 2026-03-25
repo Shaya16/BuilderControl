@@ -28,15 +28,14 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { Program, Project } from '@/types/project';
 
-import PlanIcon from '@/assets/icons/docs.svg';
-import PlusIcon from '@/assets/icons/plus.svg';
-import ListIcon from '@/assets/icons/list.svg';
 import CalendarIcon from '@/assets/icons/calendar.svg';
-import XmarkIcon from '@/assets/icons/xmark.svg';
-import DocIcon from '@/assets/icons/docs.svg';
-import TrashIcon from '@/assets/icons/trash.svg';
 import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import { default as DocIcon, default as PlanIcon } from '@/assets/icons/docs.svg';
 import LeftIcon from '@/assets/icons/left.svg';
+import ListIcon from '@/assets/icons/list.svg';
+import PlusIcon from '@/assets/icons/plus.svg';
+import TrashIcon from '@/assets/icons/trash.svg';
+import XmarkIcon from '@/assets/icons/xmark.svg';
 import { ACCENT } from '@/constants/controls';
 const STORAGE_KEY = 'projects';
 
@@ -283,14 +282,12 @@ export default function ProgramsScreen() {
                     />
                   )}
                   <ThemedView style={styles.cardContent}>
-                    <ThemedView style={styles.nameRow}>
-                      <ThemedText style={styles.programName}>{program.name}</ThemedText>
-                      {program.latestVersion && (
+                    <ThemedText style={styles.programName} numberOfLines={2}>{program.name}</ThemedText>
+                    {program.latestVersion && (
                         <View style={styles.latestBadge}>
                           <Text style={styles.latestBadgeText}>אחרון</Text>
                         </View>
                       )}
-                    </ThemedView>
                     <ThemedView style={styles.metaRow}>
                       {/* Number */}
                       <ThemedView style={styles.metaChip}>
@@ -536,29 +533,42 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   listContainer: {
+
+    display: 'flex',
+    flexDirection: 'column',
+
     gap: 10,
   },
   programCard: {
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    gap: 12,
+    padding: 14,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
-    gap: 12,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardContent: {
-    flex: 1,
+    flexGrow: 1,
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
     gap: 8,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+
   },
   programName: {
-    fontSize: 16,
-    fontWeight: '600',
+    maxWidth: 200,
+    display: 'flex',
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 22,
+
   },
   latestBadge: {
     paddingHorizontal: 8,

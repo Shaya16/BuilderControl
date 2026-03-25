@@ -76,9 +76,8 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
             </View>
           </View>
         )}
-        <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
         <ThemedView style={styles.cardContent}>
-          <ThemedText style={styles.elementName} numberOfLines={2}>{control.elementName}</ThemedText>
+          <ThemedText style={styles.elementName}>{control.elementName}</ThemedText>
 
           <ThemedView style={styles.metaRow}>
             <ThemedView style={styles.metaChip}>
@@ -159,32 +158,36 @@ export function ControlCard({ control, onPress, selectionMode, selected, onToggl
 
 const styles = StyleSheet.create({
   controlCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ccc',
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e2e8f0',
     overflow: 'hidden',
-    gap: 12,
-    paddingRight: 16,
-  },
-  typeStripe: {
-    width: 4,
-    alignSelf: 'stretch',
   },
   cardContent: {
-
-    paddingVertical: 14,
-    gap: 6,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
     alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 12,
+    gap: 6,
+    width: '100%',
   },
   elementName: {
     fontSize: 16,
     fontWeight: '600',
-    writingDirection: 'rtl',
-    textAlign: 'right',
-    flexShrink: 1,
+
   },
+
   typeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -268,18 +271,25 @@ const styles = StyleSheet.create({
     backgroundColor: `${ACCENT}08`,
   },
   checkboxWrap: {
-    paddingLeft: 12,
-    justifyContent: 'center',
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#ccc',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   checkboxChecked: {
     backgroundColor: ACCENT,

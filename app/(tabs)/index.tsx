@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
+import JSZip from 'jszip';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -219,49 +220,39 @@ export default function ControlsScreen() {
     setBatchExporting(true);
     setExportProgress({ current: 0, total: selected.length });
 
-    const savedPaths: string[] = [];
     try {
-      const exportsDir = `${FileSystem.documentDirectory}exports/`;
-      const dirInfo = await FileSystem.getInfoAsync(exportsDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(exportsDir, { intermediates: true });
-      }
+      const zip = new JSZip();
 
       for (let i = 0; i < selected.length; i++) {
         setExportProgress({ current: i + 1, total: selected.length });
         const filePath = await generateControlPDFFile(selected[i], {
           logoUri: project.logoUri,
         });
+        const pdfBase64 = await FileSystem.readAsStringAsync(filePath, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         const fileName = filePath.split('/').pop() ?? `control_${i}.pdf`;
-        const destPath = `${exportsDir}${fileName}`;
-        await FileSystem.copyAsync({ from: filePath, to: destPath });
-        savedPaths.push(destPath);
+        zip.file(fileName, pdfBase64, { base64: true });
       }
+
+      const zipBase64 = await zip.generateAsync({ type: 'base64' });
+      const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+      if (!cacheDir) throw new Error('No cache directory');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const zipPath = `${cacheDir}controls_export_${dateStr}.zip`;
+      await FileSystem.writeAsStringAsync(zipPath, zipBase64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
       setBatchExporting(false);
       setExportProgress({ current: 0, total: 0 });
       handleExitSelectionMode();
 
-      const canShare = await Sharing.isAvailableAsync();
-      Alert.alert(
-        'הייצוא הושלם',
-        `${savedPaths.length} קבצי PDF נשמרו.\n\nניתן למצוא אותם ב:\nקבצים > במכשיר שלי > BuildControl > exports`,
-        [
-          { text: 'סיום', style: 'cancel' },
-          ...(canShare ? [{
-            text: 'שתף',
-            onPress: async () => {
-              for (const path of savedPaths) {
-                await Sharing.shareAsync(path, {
-                  mimeType: 'application/pdf',
-                  dialogTitle: 'ייצוא דוחות בקרה',
-                  UTI: 'com.adobe.pdf',
-                });
-              }
-            },
-          }] : []),
-        ]
-      );
+      await Sharing.shareAsync(zipPath, {
+        mimeType: 'application/zip',
+        dialogTitle: 'ייצוא דוחות בקרה',
+        UTI: 'public.zip-archive',
+      });
     } catch {
       Alert.alert('שגיאה', 'לא ניתן היה לייצא את הדוחות. אנא נסה שוב.');
       setBatchExporting(false);

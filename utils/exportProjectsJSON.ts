@@ -5,8 +5,8 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { Control, ControlImage, Program, Project } from '@/types/project';
 
-const EXPORT_IMAGE_MAX_WIDTH = 1200;
-const EXPORT_IMAGE_COMPRESS = 0.6;
+const EXPORT_IMAGE_MAX_WIDTH = 800;
+const EXPORT_IMAGE_COMPRESS = 0.5;
 
 // ---------------------------------------------------------------------------
 // Base64 helpers
@@ -165,14 +165,6 @@ export async function exportProjectsToJSON(
   onProgress?: (current: number, total: number) => void,
 ): Promise<void> {
   const total = projects.length;
-  const converted: Project[] = [];
-
-  for (let i = 0; i < projects.length; i++) {
-    onProgress?.(i + 1, total);
-    converted.push(await convertProject(projects[i], fileUriToBase64));
-  }
-
-  const json = JSON.stringify(converted);
 
   const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
   if (!cacheDir) throw new Error('No cache or document directory available');
@@ -181,9 +173,29 @@ export async function exportProjectsToJSON(
   const filename = `projects_backup_${dateStr}.json`;
   const fileUri = `${cacheDir}${filename}`;
 
-  await FileSystem.writeAsStringAsync(fileUri, json, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  // Convert each project to a temp file to avoid OOM from holding all base64 data in memory
+  const tempFiles: string[] = [];
+  for (let i = 0; i < projects.length; i++) {
+    onProgress?.(i + 1, total);
+    const converted = await convertProject(projects[i], fileUriToBase64);
+    const tempPath = `${cacheDir}proj_chunk_${i}_${Date.now()}.json`;
+    await FileSystem.writeAsStringAsync(tempPath, JSON.stringify(converted));
+    tempFiles.push(tempPath);
+    // converted object is now eligible for GC
+  }
+
+  // Combine temp files incrementally: read current output + one chunk at a time
+  await FileSystem.writeAsStringAsync(fileUri, '[');
+
+  for (let i = 0; i < tempFiles.length; i++) {
+    const chunk = await FileSystem.readAsStringAsync(tempFiles[i]);
+    const existing = await FileSystem.readAsStringAsync(fileUri);
+    await FileSystem.writeAsStringAsync(fileUri, existing + (i > 0 ? ',' : '') + chunk);
+    await FileSystem.deleteAsync(tempFiles[i], { idempotent: true });
+  }
+
+  const final = await FileSystem.readAsStringAsync(fileUri);
+  await FileSystem.writeAsStringAsync(fileUri, final + ']');
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
@@ -210,9 +222,7 @@ export async function importProjectsFromJSON(
   const file = result.assets?.[0];
   if (!file?.uri) return null;
 
-  const content = await FileSystem.readAsStringAsync(file.uri, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  const content = await FileSystem.readAsStringAsync(file.uri);
 
   const parsed = JSON.parse(content);
 

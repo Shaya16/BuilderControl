@@ -6,18 +6,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { ACCENT } from '@/constants/controls';
 import { ConcreteType, ControlImage } from '@/types/project';
 
-import { styles } from './styles';
-import PlusIcon from '@/assets/icons/plus.svg';
 import CheckmarkIcon from '@/assets/icons/checkmark.svg';
+import PlusIcon from '@/assets/icons/plus.svg';
 import XmarkIcon from '@/assets/icons/xmark.svg';
+import { styles } from './styles';
 
 const CONCRETE_TYPES: ConcreteType[] = [
-  { id: 'b-15', name: 'B-15' },
-  { id: 'b-20', name: 'B-20' },
-  { id: 'b-25', name: 'B-25' },
-  { id: 'b-30', name: 'B-30' },
-  { id: 'b-40', name: 'B-40' },
-  { id: 'b-50', name: 'B-50' },
+  { id: 'b-10', name: 'ב-10' },
+  { id: 'b-20', name: 'ב-20' },
+  { id: 'b-30', name: 'ב-30' },
+  { id: 'b-40', name: 'ב-40' },
+  { id: 'b-50', name: 'ב-50' },
 ];
 
 type Props = {

@@ -816,7 +816,7 @@ function buildHtmlDocument(pages: string, typeColor: string): string {
 
     .section-image {
       width: 100%;
-      max-height: 220px;
+      max-height: 200px;
       object-fit: contain;
       display: block;
       border-radius: 10px;
