@@ -950,6 +950,8 @@ export async function generateControlPDFFile(
     imagesToCards(control.ConcreteControlImages),
   ]);
 
+  console.log(`[PDF] "${control.elementName}" images: iron=${ironCards.length} elec=${electricCards.length} inst=${installationCards.length} water=${waterCards.length} other=${otherCards.length} concrete=${concreteCards.length} programs=${programCards.length}`);
+
   const validatedConcreteHtml = control.validated_concrete
     ? `<span class="validated-badge validated-yes">היציקה אושרה ב${control.validated_concrete_at ? new Date(control.validated_concrete_at).toLocaleDateString('he-IL') : ''} בשעה ${control.validated_concrete_at ? new Date(control.validated_concrete_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : ''}</span>`
     : `<span class="validated-badge validated-no">היציקה לא אושרה</span>`;
@@ -1143,11 +1145,14 @@ export async function generateControlPDFFile(
   });
   // #endregion
 
+  console.log(`[PDF] "${control.elementName}" printing (${(html.length / 1024).toFixed(0)}KB HTML, ${totalPages} pages)...`);
+  const printStart = Date.now();
   const { uri: tempUri } = await Print.printToFileAsync({
     html,
     width: A4_WIDTH,
     height: A4_HEIGHT,
   });
+  console.log(`[PDF] "${control.elementName}" print done in ${Date.now() - printStart}ms`);
 
   // #region agent log
   debugPdfLog({

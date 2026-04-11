@@ -48,6 +48,7 @@ export default function ControlsScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchExporting, setBatchExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
+  const [exportStatus, setExportStatus] = useState('');
   const colorScheme = useColorScheme() ?? 'light';
 
   const loadProject = useCallback(() => {
@@ -224,20 +225,38 @@ export default function ControlsScreen() {
       const zip = new JSZip();
 
       for (let i = 0; i < selected.length; i++) {
+        const control = selected[i];
         setExportProgress({ current: i + 1, total: selected.length });
-        const filePath = await generateControlPDFFile(selected[i], {
+        setExportStatus(`מייצר PDF: ${control.elementName}...`);
+
+        const t0 = Date.now();
+        const filePath = await generateControlPDFFile(control, {
           logoUri: project.logoUri,
         });
+        console.log(`[Export] PDF "${control.elementName}" generated in ${Date.now() - t0}ms`);
+
+        setExportStatus(`קורא קובץ ${i + 1}...`);
         const pdfBase64 = await FileSystem.readAsStringAsync(filePath, {
           encoding: FileSystem.EncodingType.Base64,
         });
+        console.log(`[Export] PDF "${control.elementName}" read: ${(pdfBase64.length / 1024).toFixed(0)}KB`);
+
         const fileName = filePath.split('/').pop() ?? `control_${i}.pdf`;
         zip.file(fileName, pdfBase64, { base64: true });
         // Free the PDF temp file immediately to reduce memory pressure
         await FileSystem.deleteAsync(filePath, { idempotent: true });
+
+        // Small delay to let UI update and GC run
+        if (i < selected.length - 1) {
+          await new Promise(r => setTimeout(r, 50));
+        }
       }
 
+      setExportStatus('יוצר קובץ ZIP...');
+      console.log(`[Export] Generating ZIP from ${selected.length} PDFs...`);
+      const tZip = Date.now();
       const zipBase64 = await zip.generateAsync({ type: 'base64' });
+      console.log(`[Export] ZIP generated in ${Date.now() - tZip}ms (${(zipBase64.length / 1024).toFixed(0)}KB)`);
       const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
       if (!cacheDir) throw new Error('No cache directory');
       const dateStr = new Date().toISOString().slice(0, 10);
@@ -248,6 +267,7 @@ export default function ControlsScreen() {
 
       setBatchExporting(false);
       setExportProgress({ current: 0, total: 0 });
+      setExportStatus('');
       handleExitSelectionMode();
 
       await Sharing.shareAsync(zipPath, {
@@ -264,6 +284,7 @@ export default function ControlsScreen() {
       }
       setBatchExporting(false);
       setExportProgress({ current: 0, total: 0 });
+      setExportStatus('');
       handleExitSelectionMode();
     }
   };
@@ -429,6 +450,9 @@ export default function ControlsScreen() {
             <Text style={styles.exportOverlayProgress}>
               {exportProgress.current} / {exportProgress.total}
             </Text>
+            {exportStatus ? (
+              <Text style={styles.exportOverlayStatus}>{exportStatus}</Text>
+            ) : null}
             <View style={styles.progressBarTrack}>
               <View
                 style={[
@@ -617,6 +641,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#666',
+  },
+  exportOverlayStatus: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'center',
   },
   progressBarTrack: {
     width: '100%',
