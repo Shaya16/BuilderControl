@@ -12,13 +12,11 @@ const { join } = require('path');
  */
 
 // Android ≤ 11 — fullBackupContent
+// When <include> is used, only the listed domains are backed up (implicit exclude for the rest).
 const BACKUP_RULES_XML = `<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
   <include domain="sharedpref" path="." />
   <include domain="file" path="." />
-  <exclude domain="cache" path="." />
-  <exclude domain="external" path="." />
-  <exclude domain="root" path="no_backup" />
 </full-backup-content>
 `;
 
@@ -28,14 +26,10 @@ const DATA_EXTRACTION_RULES_XML = `<?xml version="1.0" encoding="utf-8"?>
   <cloud-backup>
     <include domain="sharedpref" path="." />
     <include domain="file" path="." />
-    <exclude domain="cache" path="." />
-    <exclude domain="external" path="." />
-    <exclude domain="root" path="no_backup" />
   </cloud-backup>
   <device-transfer>
     <include domain="sharedpref" path="." />
     <include domain="file" path="." />
-    <exclude domain="cache" path="." />
   </device-transfer>
 </data-extraction-rules>
 `;
