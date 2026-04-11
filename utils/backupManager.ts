@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { File as FSFile } from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import JSZip from 'jszip';
@@ -338,7 +339,7 @@ export async function exportBackupZip(
   const uniqueUris = [...new Set(allUris.filter(Boolean))];
   const total = uniqueUris.length + 1; // +1 for the JSON write
 
-  // Add images to zip
+  // Add images to zip as raw bytes (no base64)
   for (let i = 0; i < uniqueUris.length; i++) {
     const uri = uniqueUris[i];
     onProgress?.(i + 1, total);
@@ -347,11 +348,9 @@ export async function exportBackupZip(
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) continue;
 
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const imgBytes = new FSFile(uri).bytes();
       const relativePath = toRelativePath(uri);
-      zip.file(relativePath, base64, { base64: true });
+      zip.file(relativePath, imgBytes);
     } catch {
       // Skip broken refs
     }
@@ -362,8 +361,8 @@ export async function exportBackupZip(
   zip.file(PROJECTS_FILE, JSON.stringify(rewritten));
   onProgress?.(total, total);
 
-  // Generate zip
-  const zipBase64 = await zip.generateAsync({ type: 'base64' });
+  // Generate zip as raw bytes and write via JSI (no string size limits)
+  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
 
   const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
   if (!cacheDir) throw new Error('No cache directory available');
@@ -371,9 +370,10 @@ export async function exportBackupZip(
   const dateStr = new Date().toISOString().slice(0, 10);
   const zipPath = `${cacheDir}backup_${dateStr}.zip`;
 
-  await FileSystem.writeAsStringAsync(zipPath, zipBase64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const outFile = new FSFile(zipPath);
+  const handle = outFile.open();
+  handle.writeBytes(zipBytes);
+  handle.close();
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
@@ -431,11 +431,9 @@ async function importFromZip(
   zipUri: string,
   onProgress?: (current: number, total: number) => void,
 ): Promise<Project[]> {
-  const zipBase64 = await FileSystem.readAsStringAsync(zipUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  const zip = await JSZip.loadAsync(zipBase64, { base64: true });
+  // Read ZIP as raw bytes via JSI (no string size limits)
+  const zipBytes = new FSFile(zipUri).bytes();
+  const zip = await JSZip.loadAsync(zipBytes);
 
   // Read projects.json
   const projectsFile = zip.file(PROJECTS_FILE);
@@ -476,10 +474,11 @@ async function importFromZip(
       const parentDir = destPath.substring(0, destPath.lastIndexOf('/'));
       await FileSystem.makeDirectoryAsync(parentDir, { intermediates: true });
 
-      const base64 = await zip.files[relativePath].async('base64');
-      await FileSystem.writeAsStringAsync(destPath, base64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const imgBytes = await zip.files[relativePath].async('uint8array');
+      const imgFile = new FSFile(destPath);
+      const imgHandle = imgFile.open();
+      imgHandle.writeBytes(imgBytes);
+      imgHandle.close();
     } catch {
       // Skip individual file failures
     }
