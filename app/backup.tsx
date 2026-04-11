@@ -24,6 +24,7 @@ export default function BackupScreen() {
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState('');
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [statusLine, setStatusLine] = useState('');
   const colorScheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
 
@@ -31,6 +32,7 @@ export default function BackupScreen() {
     setBusy(true);
     setBusyLabel('מייצא גיבוי...');
     setProgress({ current: 0, total: 0 });
+    setStatusLine('טוען פרויקטים...');
     try {
       const projects = await loadProjects();
       if (projects.length === 0) {
@@ -38,9 +40,15 @@ export default function BackupScreen() {
         Alert.alert('אין פרויקטים', 'אין פרויקטים לייצוא');
         return;
       }
-      await exportBackupZip(projects, (current, total) => {
-        setProgress({ current, total });
-      });
+      await exportBackupZip(
+        projects,
+        (current, total) => {
+          setProgress({ current, total });
+        },
+        (status) => {
+          setStatusLine(status);
+        },
+      );
     } catch (e: any) {
       Alert.alert('שגיאה', e?.message ?? 'לא ניתן לייצא גיבוי');
     } finally {
@@ -207,7 +215,7 @@ export default function BackupScreen() {
             {progress.total > 0 && (
               <>
                 <Text style={styles.overlayProgress}>
-                  {progress.current} / {progress.total}
+                  {Math.round(progress.current)} / {progress.total}
                 </Text>
                 <View style={styles.progressTrack}>
                   <View
@@ -220,6 +228,9 @@ export default function BackupScreen() {
                   />
                 </View>
               </>
+            )}
+            {statusLine !== '' && (
+              <Text style={styles.overlayStatus}>{statusLine}</Text>
             )}
           </View>
         </View>
@@ -330,5 +341,11 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: ACCENT,
     borderRadius: 3,
+  },
+  overlayStatus: {
+    fontSize: 13,
+    color: '#999',
+    writingDirection: 'rtl',
+    textAlign: 'center',
   },
 });

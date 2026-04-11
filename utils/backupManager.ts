@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 import JSZip from 'jszip';
 
 import { Control, ControlImage, Program, Project } from '@/types/project';
+import { StreamingZipWriter, textToBytes } from './streamingZip';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -122,18 +123,28 @@ function rewriteProjectUris(
 export async function exportBackupZip(
   projects: Project[],
   onProgress?: (current: number, total: number) => void,
+  onStatus?: (status: string) => void,
 ): Promise<void> {
-  const zip = new JSZip();
+  const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!cacheDir) throw new Error('No cache directory available');
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const zipPath = `${cacheDir}backup_${dateStr}.zip`;
 
   // Collect all unique image URIs
+  onStatus?.('אוסף תמונות...');
   const allUris: string[] = [];
   for (const project of projects) {
     allUris.push(...collectImageUris(project));
   }
   const uniqueUris = [...new Set(allUris.filter(Boolean))];
-  const total = uniqueUris.length + 1; // +1 for the JSON write
+  const total = uniqueUris.length + 1; // +1 for JSON write
 
-  // Add images to zip as raw bytes (no base64)
+  // Stream directly to disk — each image is read, written to ZIP, then freed.
+  // Unlike JSZip, this never holds the full ZIP in memory.
+  const writer = new StreamingZipWriter(zipPath);
+
+  onStatus?.(`מוסיף ${uniqueUris.length} תמונות...`);
   for (let i = 0; i < uniqueUris.length; i++) {
     const uri = uniqueUris[i];
     onProgress?.(i + 1, total);
@@ -144,31 +155,24 @@ export async function exportBackupZip(
 
       const imgBytes = new FSFile(uri).bytes();
       const relativePath = toRelativePath(uri);
-      zip.file(relativePath, imgBytes);
+      writer.addFile(relativePath, imgBytes);
     } catch {
       // Skip broken refs
     }
   }
 
-  // Rewrite URIs and add projects.json
+  // Add projects.json with rewritten relative URIs
+  onStatus?.('שומר נתוני פרויקטים...');
   const rewritten = projects.map((p) => rewriteProjectUris(p, toRelativePath));
-  zip.file(PROJECTS_FILE, JSON.stringify(rewritten));
+  const jsonBytes = textToBytes(JSON.stringify(rewritten));
+  writer.addFile(PROJECTS_FILE, jsonBytes);
   onProgress?.(total, total);
 
-  // Generate zip as raw bytes and write via JSI (no string size limits)
-  const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+  // Finalize ZIP (writes central directory + closes file)
+  onStatus?.('מסיים קובץ ZIP...');
+  writer.finalize();
 
-  const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-  if (!cacheDir) throw new Error('No cache directory available');
-
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const zipPath = `${cacheDir}backup_${dateStr}.zip`;
-
-  const outFile = new FSFile(zipPath);
-  const handle = outFile.open();
-  handle.writeBytes(zipBytes);
-  handle.close();
-
+  onStatus?.('פותח שיתוף...');
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
     await Sharing.shareAsync(zipPath, {
