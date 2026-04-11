@@ -144,33 +144,39 @@ export async function exportBackupZip(
   // Unlike JSZip, this never holds the full ZIP in memory.
   const writer = new StreamingZipWriter(zipPath);
 
-  onStatus?.(`מוסיף ${uniqueUris.length} תמונות...`);
-  for (let i = 0; i < uniqueUris.length; i++) {
-    const uri = uniqueUris[i];
-    onProgress?.(i + 1, total);
+  try {
+    onStatus?.(`מוסיף ${uniqueUris.length} תמונות...`);
+    for (let i = 0; i < uniqueUris.length; i++) {
+      const uri = uniqueUris[i];
+      onProgress?.(i + 1, total);
 
-    try {
-      const info = await FileSystem.getInfoAsync(uri);
-      if (!info.exists) continue;
+      try {
+        const info = await FileSystem.getInfoAsync(uri);
+        if (!info.exists) continue;
 
-      const imgBytes = new FSFile(uri).bytes();
-      const relativePath = toRelativePath(uri);
-      writer.addFile(relativePath, imgBytes);
-    } catch {
-      // Skip broken refs
+        const imgBytes = new FSFile(uri).bytes();
+        const relativePath = toRelativePath(uri);
+        writer.addFile(relativePath, imgBytes);
+      } catch {
+        // Skip broken refs
+      }
     }
+
+    // Add projects.json with rewritten relative URIs
+    onStatus?.('שומר נתוני פרויקטים...');
+    const rewritten = projects.map((p) => rewriteProjectUris(p, toRelativePath));
+    const jsonBytes = textToBytes(JSON.stringify(rewritten));
+    writer.addFile(PROJECTS_FILE, jsonBytes);
+    onProgress?.(total, total);
+
+    // Finalize ZIP (writes central directory + closes file)
+    onStatus?.('מסיים קובץ ZIP...');
+    writer.finalize();
+  } catch (error) {
+    // Ensure file handle is closed on any error
+    writer.close();
+    throw error;
   }
-
-  // Add projects.json with rewritten relative URIs
-  onStatus?.('שומר נתוני פרויקטים...');
-  const rewritten = projects.map((p) => rewriteProjectUris(p, toRelativePath));
-  const jsonBytes = textToBytes(JSON.stringify(rewritten));
-  writer.addFile(PROJECTS_FILE, jsonBytes);
-  onProgress?.(total, total);
-
-  // Finalize ZIP (writes central directory + closes file)
-  onStatus?.('מסיים קובץ ZIP...');
-  writer.finalize();
 
   onStatus?.('פותח שיתוף...');
   const canShare = await Sharing.isAvailableAsync();

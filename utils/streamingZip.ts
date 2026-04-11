@@ -116,7 +116,19 @@ export class StreamingZipWriter {
 
   constructor(outputPath: string) {
     const file = new FSFile(outputPath);
+    // Ensure the file exists before opening (FSFile.open throws if it doesn't).
+    // Use overwrite to handle re-exporting on the same day.
+    file.create({ overwrite: true });
     this.handle = file.open();
+  }
+
+  /** Close the file handle without writing central directory (for error cleanup). */
+  close(): void {
+    try {
+      this.handle.close();
+    } catch {
+      // Already closed or invalid — ignore
+    }
   }
 
   /** Add a file entry to the ZIP. Writes directly to disk. */
