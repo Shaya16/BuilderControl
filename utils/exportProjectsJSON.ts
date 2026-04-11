@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { File as FSFile } from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
@@ -81,9 +82,7 @@ async function base64ToFileUri(dataUri: string): Promise<string> {
   const filename = `imported_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
   const fileUri = `${cacheDir}${filename}`;
 
-  await FileSystem.writeAsStringAsync(fileUri, raw, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  new FSFile(fileUri).write(raw, { encoding: 'base64' });
 
   return fileUri;
 }
@@ -173,29 +172,32 @@ export async function exportProjectsToJSON(
   const filename = `projects_backup_${dateStr}.json`;
   const fileUri = `${cacheDir}${filename}`;
 
-  // Convert each project to a temp file to avoid OOM from holding all base64 data in memory
+  // Convert each project to a temp file to avoid OOM from holding all base64 data in memory.
+  // Uses the new JSI-based File API (not legacy bridge) to handle large base64 strings.
   const tempFiles: string[] = [];
   for (let i = 0; i < projects.length; i++) {
     onProgress?.(i + 1, total);
     const converted = await convertProject(projects[i], fileUriToBase64);
     const tempPath = `${cacheDir}proj_chunk_${i}_${Date.now()}.json`;
-    await FileSystem.writeAsStringAsync(tempPath, JSON.stringify(converted));
+    new FSFile(tempPath).write(JSON.stringify(converted));
     tempFiles.push(tempPath);
     // converted object is now eligible for GC
   }
 
-  // Combine temp files in a single pass — read each chunk once, join, write once.
-  // This avoids the previous pattern of re-reading the growing output file on every
-  // iteration which caused O(totalSize * N) peak memory and OOM on Android.
-  const jsonParts: string[] = ['['];
+  // Combine temp files using streaming FileHandle writes to avoid both
+  // OOM (no giant joined string) and bridge limits (JSI-based I/O).
+  const outFile = new FSFile(fileUri);
+  const handle = outFile.open();
+  const enc = new TextEncoder();
+  handle.writeBytes(enc.encode('['));
   for (let i = 0; i < tempFiles.length; i++) {
-    if (i > 0) jsonParts.push(',');
-    const chunk = await FileSystem.readAsStringAsync(tempFiles[i]);
-    jsonParts.push(chunk);
-    await FileSystem.deleteAsync(tempFiles[i], { idempotent: true });
+    if (i > 0) handle.writeBytes(enc.encode(','));
+    const chunkFile = new FSFile(tempFiles[i]);
+    handle.writeBytes(enc.encode(chunkFile.textSync()));
+    chunkFile.delete();
   }
-  jsonParts.push(']');
-  await FileSystem.writeAsStringAsync(fileUri, jsonParts.join(''));
+  handle.writeBytes(enc.encode(']'));
+  handle.close();
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {
