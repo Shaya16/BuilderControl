@@ -5,8 +5,8 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { Control, ControlImage, Program, Project } from '@/types/project';
 
-const EXPORT_IMAGE_MAX_WIDTH = 600;
-const EXPORT_IMAGE_COMPRESS = 0.35;
+const EXPORT_IMAGE_MAX_WIDTH = 1200;
+const EXPORT_IMAGE_COMPRESS = 0.7;
 
 // ---------------------------------------------------------------------------
 // Base64 helpers
