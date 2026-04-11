@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,7 +21,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Fonts } from '@/constants/theme';
 import { Project } from '@/types/project';
-import { exportProjectsToJSON, importProjectsFromJSON } from '@/utils/exportProjectsJSON';
+import { exportBackupZip, importBackupFile } from '@/utils/backupManager';
+import { loadProjects, saveProjects } from '@/utils/projectStorage';
 
 import FolderIcon from '@/assets/icons/folder.svg';
 import PlusIcon from '@/assets/icons/plus.svg';
@@ -29,7 +30,7 @@ import LeftIcon from '@/assets/icons/left.svg';
 import DownloadIcon from '@/assets/icons/download.svg';
 import ArrowTriangleIcon from '@/assets/icons/arrow_triangle.svg';
 import TrashIcon from '@/assets/icons/trash.svg';
-import { ACCENT, STORAGE_KEY } from '@/constants/controls';
+import { ACCENT } from '@/constants/controls';
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -41,16 +42,24 @@ export default function ProjectsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
 
-  // Load from AsyncStorage on mount
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (stored) setProjects(JSON.parse(stored));
-    });
-  }, []);
+  const hasLoaded = useRef(false);
 
-  // Save to AsyncStorage whenever projects change
+  // Reload from storage every time the screen gains focus
+  // (covers: initial mount, returning from backup screen after restore, etc.)
+  useFocusEffect(
+    useCallback(() => {
+      loadProjects().then((stored) => {
+        setProjects(stored);
+        hasLoaded.current = true;
+      });
+    }, []),
+  );
+
+  // Save to storage whenever projects change (with auto-backup),
+  // but skip the very first render before data has loaded.
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    if (!hasLoaded.current) return;
+    saveProjects(projects);
   }, [projects]);
 
   const handleAddProject = () => {
@@ -85,36 +94,36 @@ export default function ProjectsScreen() {
     );
   };
 
-  const handleExportJSON = async () => {
+  const handleExport = async () => {
     if (projects.length === 0) {
       Alert.alert('אין פרויקטים', 'אין פרויקטים לייצוא');
       return;
     }
     setJsonBusy(true);
-    setJsonProgress({ label: 'מייצא פרויקטים...', current: 0, total: projects.length });
+    setJsonProgress({ label: 'מייצא גיבוי...', current: 0, total: 0 });
     try {
-      await exportProjectsToJSON(projects, (current, total) => {
-        setJsonProgress({ label: 'מייצא פרויקטים...', current, total });
+      await exportBackupZip(projects, (current, total) => {
+        setJsonProgress({ label: 'מייצא גיבוי...', current, total });
       });
     } catch (e: any) {
-      Alert.alert('שגיאה', e?.message ?? 'לא ניתן לייצא את הפרויקטים');
+      Alert.alert('שגיאה', e?.message ?? 'לא ניתן לייצא את הגיבוי');
     } finally {
       setJsonBusy(false);
     }
   };
 
-  const handleImportJSON = async () => {
+  const handleImport = async () => {
     try {
       setJsonBusy(true);
-      setJsonProgress({ label: 'מייבא פרויקטים...', current: 0, total: 0 });
-      const imported = await importProjectsFromJSON((current, total) => {
-        setJsonProgress({ label: 'מייבא פרויקטים...', current, total });
+      setJsonProgress({ label: 'מייבא גיבוי...', current: 0, total: 0 });
+      const imported = await importBackupFile((current, total) => {
+        setJsonProgress({ label: 'מייבא גיבוי...', current, total });
       });
       setJsonBusy(false);
       if (!imported) return;
 
       Alert.alert(
-        'ייבוא פרויקטים',
+        'ייבוא גיבוי',
         `נמצאו ${imported.length} פרויקטים. האם לייבא אותם?`,
         [
           { text: 'ביטול', style: 'cancel' },
@@ -192,7 +201,7 @@ export default function ProjectsScreen() {
             )}
           </ThemedView>
   
-          {/* Import / Export */}
+          {/* Actions */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[
@@ -206,7 +215,31 @@ export default function ProjectsScreen() {
                       : 'rgba(17,24,28,0.08)',
                 },
               ]}
-              onPress={handleImportJSON}
+              onPress={() => router.push('/backup')}
+              activeOpacity={0.8}>
+              <DownloadIcon width={16} height={16} fill={ACCENT} />
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+                ]}>
+                גיבויים
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                  borderColor:
+                    colorScheme === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(17,24,28,0.08)',
+                },
+              ]}
+              onPress={handleImport}
               activeOpacity={0.8}>
               <ArrowTriangleIcon width={16} height={16} fill={ACCENT} />
               <Text
@@ -231,7 +264,7 @@ export default function ProjectsScreen() {
                         : 'rgba(17,24,28,0.08)',
                   },
                 ]}
-                onPress={handleExportJSON}
+                onPress={handleExport}
                 activeOpacity={0.8}>
                 <DownloadIcon width={16} height={16} fill={ACCENT} />
                 <Text

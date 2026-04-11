@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useGlobalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -23,12 +22,12 @@ import { ThemedView } from '@/components/themed-view';
 
 import { Colors } from '@/constants/theme';
 import { ConcreteType, Project } from '@/types/project';
+import { loadProjects, saveProject as persistProject } from '@/utils/projectStorage';
 
 import { ACCENT } from '@/constants/controls';
 import PlusIcon from '@/assets/icons/plus.svg';
 import LeftIcon from '@/assets/icons/left.svg';
 import TrashIcon from '@/assets/icons/trash.svg';
-const STORAGE_KEY = 'projects';
 
 export default function ConcreteScreen() {
   const { projectId } = useGlobalSearchParams<{ projectId?: string }>();
@@ -40,28 +39,20 @@ export default function ConcreteScreen() {
 
   const loadProject = useCallback(() => {
     if (!projectId) return;
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (!stored) return;
-      const projects: Project[] = JSON.parse(stored);
+    loadProjects().then((projects) => {
       const found = projects.find((p) => p.id === projectId);
       if (found) setProject(found);
     });
   }, [projectId]);
 
-  // Load project when projectId changes
   useEffect(() => {
     loadProject();
   }, [loadProject]);
 
-  // Reload project when tab gains focus (e.g. after creating a control on another tab)
   useFocusEffect(loadProject);
 
-  // Persist updated project back to AsyncStorage
   const saveProject = async (updated: Project) => {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    const projects: Project[] = stored ? JSON.parse(stored) : [];
-    const next = projects.map((p) => (p.id === updated.id ? updated : p));
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    await persistProject(updated);
     setProject(updated);
   };
 

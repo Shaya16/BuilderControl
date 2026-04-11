@@ -36,6 +36,7 @@ export default function RootLayout() {
       <View style={styles.rtlWrapper}>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="backup" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="reset-to-root" options={{ headerShown: false }} />
         </Stack>

@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams } from 'expo-router';
@@ -24,10 +23,11 @@ import { TabHeader } from '@/components/tab-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-import { ACCENT, STORAGE_KEY } from '@/constants/controls';
+import { ACCENT } from '@/constants/controls';
 import { Colors } from '@/constants/theme';
 import { ConcreteType, Control, ControlImage, ElementType, Project } from '@/types/project';
 import { generateControlPDFFile } from '@/utils/exportControlPDF';
+import { loadProjects, saveProject as persistProject } from '@/utils/projectStorage';
 
 import ControlIcon from '@/assets/icons/control.svg';
 import PlusIcon from '@/assets/icons/plus.svg';
@@ -53,9 +53,7 @@ export default function ControlsScreen() {
 
   const loadProject = useCallback(() => {
     if (!projectId) return;
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (!stored) return;
-      const projects: Project[] = JSON.parse(stored);
+    loadProjects().then((projects) => {
       const found = projects.find((p) => p.id === projectId);
       if (found) setProject(found);
     });
@@ -68,10 +66,7 @@ export default function ControlsScreen() {
   useFocusEffect(loadProject);
 
   const saveProject = async (updated: Project) => {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    const projects: Project[] = stored ? JSON.parse(stored) : [];
-    const next = projects.map((p) => (p.id === updated.id ? updated : p));
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    await persistProject(updated);
     setProject(updated);
   };
 

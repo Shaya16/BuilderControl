@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
@@ -25,6 +24,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ACCENT } from '@/constants/controls';
 import { Colors } from '@/constants/theme';
 import { Project } from '@/types/project';
+import { loadProjects, saveProject as persistProject } from '@/utils/projectStorage';
 
 import SettingsIcon from '@/assets/icons/settings.svg';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -32,8 +32,6 @@ import XmarkIcon from '@/assets/icons/xmark.svg';
 import PhotoIcon from '@/assets/icons/photo.svg';
 import ArrowTriangleIcon from '@/assets/icons/arrow_triangle.svg';
 import CheckmarkIcon from '@/assets/icons/checkmark.svg';
-
-const STORAGE_KEY = 'projects';
 
 export default function SettingsScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
@@ -46,9 +44,7 @@ export default function SettingsScreen() {
 
   const loadProject = useCallback(() => {
     if (!projectId) return;
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (!stored) return;
-      const projects: Project[] = JSON.parse(stored);
+    loadProjects().then((projects) => {
       const found = projects.find((p) => p.id === projectId);
       if (found) {
         setProject(found);
@@ -66,10 +62,7 @@ export default function SettingsScreen() {
   useFocusEffect(loadProject);
 
   const saveProject = async (updated: Project) => {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    const projects: Project[] = stored ? JSON.parse(stored) : [];
-    const next = projects.map((p) => (p.id === updated.id ? updated : p));
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    await persistProject(updated);
     setProject(updated);
   };
 
