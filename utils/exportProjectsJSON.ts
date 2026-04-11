@@ -5,8 +5,8 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { Control, ControlImage, Program, Project } from '@/types/project';
 
-const EXPORT_IMAGE_MAX_WIDTH = 800;
-const EXPORT_IMAGE_COMPRESS = 0.5;
+const EXPORT_IMAGE_MAX_WIDTH = 600;
+const EXPORT_IMAGE_COMPRESS = 0.35;
 
 // ---------------------------------------------------------------------------
 // Base64 helpers
@@ -184,18 +184,18 @@ export async function exportProjectsToJSON(
     // converted object is now eligible for GC
   }
 
-  // Combine temp files incrementally: read current output + one chunk at a time
-  await FileSystem.writeAsStringAsync(fileUri, '[');
-
+  // Combine temp files in a single pass — read each chunk once, join, write once.
+  // This avoids the previous pattern of re-reading the growing output file on every
+  // iteration which caused O(totalSize * N) peak memory and OOM on Android.
+  const jsonParts: string[] = ['['];
   for (let i = 0; i < tempFiles.length; i++) {
+    if (i > 0) jsonParts.push(',');
     const chunk = await FileSystem.readAsStringAsync(tempFiles[i]);
-    const existing = await FileSystem.readAsStringAsync(fileUri);
-    await FileSystem.writeAsStringAsync(fileUri, existing + (i > 0 ? ',' : '') + chunk);
+    jsonParts.push(chunk);
     await FileSystem.deleteAsync(tempFiles[i], { idempotent: true });
   }
-
-  const final = await FileSystem.readAsStringAsync(fileUri);
-  await FileSystem.writeAsStringAsync(fileUri, final + ']');
+  jsonParts.push(']');
+  await FileSystem.writeAsStringAsync(fileUri, jsonParts.join(''));
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {

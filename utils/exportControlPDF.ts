@@ -11,8 +11,8 @@ import {
 } from '@/constants/controls';
 import { Control, ControlImage, Program } from '@/types/project';
 
-const PDF_IMAGE_MAX_WIDTH = 800;
-const PDF_IMAGE_COMPRESS = 0.75;
+const PDF_IMAGE_MAX_WIDTH = 600;
+const PDF_IMAGE_COMPRESS = 0.5;
 
 const A4_WIDTH = 595;
 const A4_HEIGHT = 842;

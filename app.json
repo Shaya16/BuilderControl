@@ -20,6 +20,7 @@
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/icon.png"
       },
+      "allowBackup": true,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.shaya16.StructuralPlanner"
@@ -29,6 +30,7 @@
       "favicon": "./assets/images/icon.png"
     },
     "plugins": [
+      "./plugins/withBackupRules",
       "expo-localization",
       "expo-image-picker",
       "expo-router",

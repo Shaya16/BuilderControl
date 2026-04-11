@@ -233,6 +233,8 @@ export default function ControlsScreen() {
         });
         const fileName = filePath.split('/').pop() ?? `control_${i}.pdf`;
         zip.file(fileName, pdfBase64, { base64: true });
+        // Free the PDF temp file immediately to reduce memory pressure
+        await FileSystem.deleteAsync(filePath, { idempotent: true });
       }
 
       const zipBase64 = await zip.generateAsync({ type: 'base64' });
@@ -253,8 +255,13 @@ export default function ControlsScreen() {
         dialogTitle: 'ייצוא דוחות בקרה',
         UTI: 'public.zip-archive',
       });
-    } catch {
-      Alert.alert('שגיאה', 'לא ניתן היה לייצא את הדוחות. אנא נסה שוב.');
+    } catch (e: any) {
+      const msg = String(e?.message ?? '');
+      if (msg.includes('OutOfMemory') || msg.includes('rejected')) {
+        Alert.alert('שגיאה', 'אין מספיק זיכרון לייצוא. נסה לייצא פחות דוחות בכל פעם.');
+      } else {
+        Alert.alert('שגיאה', 'לא ניתן היה לייצא את הדוחות. אנא נסה שוב.');
+      }
       setBatchExporting(false);
       setExportProgress({ current: 0, total: 0 });
       handleExitSelectionMode();

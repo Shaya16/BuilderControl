@@ -3,6 +3,7 @@ import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } fro
 
 import * as ImagePicker from 'expo-image-picker';
 
+import { persistImage, persistImages } from '@/utils/persistImage';
 import { ACCENT } from '@/constants/controls';
 import { ConcreteType, ControlImage } from '@/types/project';
 
@@ -45,7 +46,8 @@ export function StepConcreteType({ value, images, validatedConcrete, validatedCo
             quality: 0.8,
           });
           if (!result.canceled) {
-            onChangeImages([{ uri: result.assets[0].uri, description: '' }, ...images]);
+            const uri = await persistImage(result.assets[0].uri);
+            onChangeImages([{ uri, description: '' }, ...images]);
           }
         },
       },
@@ -60,10 +62,8 @@ export function StepConcreteType({ value, images, validatedConcrete, validatedCo
             allowsMultipleSelection: true,
           });
           if (!result.canceled) {
-            onChangeImages([
-              ...result.assets.map((a) => ({ uri: a.uri, description: '' })),
-              ...images,
-            ]);
+            const persisted = await persistImages(result.assets);
+            onChangeImages([...persisted, ...images]);
           }
         },
       },
