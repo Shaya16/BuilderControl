@@ -154,7 +154,7 @@ export async function exportBackupZip(
         const info = await FileSystem.getInfoAsync(uri);
         if (!info.exists) continue;
 
-        const imgBytes = new FSFile(uri).bytes();
+        const imgBytes = new FSFile(uri).bytesSync();
         const relativePath = toRelativePath(uri);
         writer.addFile(relativePath, imgBytes);
       } catch {
@@ -236,7 +236,7 @@ async function importFromZip(
   onProgress?: (current: number, total: number) => void,
 ): Promise<Project[]> {
   // Read ZIP as raw bytes via JSI (no string size limits)
-  const zipBytes = new FSFile(zipUri).bytes();
+  const zipBytes = new FSFile(zipUri).bytesSync();
   const zip = await JSZip.loadAsync(zipBytes);
 
   // Read projects.json
