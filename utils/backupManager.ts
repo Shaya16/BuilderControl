@@ -116,13 +116,13 @@ function rewriteProjectUris(
 // ---------------------------------------------------------------------------
 
 /**
- * Create a ZIP backup and open the share sheet so the user can save it
- * to Google Drive, email, WhatsApp, etc.
+ * Create a ZIP backup file and return its path.
+ * Does NOT open the share sheet — use exportBackupZip() for that.
  */
-export async function exportBackupZip(
+export async function createBackupZip(
   projects: Project[],
   onProgress?: (current: number, total: number) => void,
-): Promise<void> {
+): Promise<string> {
   const zip = new JSZip();
 
   // Collect all unique image URIs
@@ -168,6 +168,19 @@ export async function exportBackupZip(
   const handle = outFile.open();
   handle.writeBytes(zipBytes);
   handle.close();
+
+  return zipPath;
+}
+
+/**
+ * Create a ZIP backup and open the share sheet so the user can save it
+ * to Google Drive, email, WhatsApp, etc.
+ */
+export async function exportBackupZip(
+  projects: Project[],
+  onProgress?: (current: number, total: number) => void,
+): Promise<void> {
+  const zipPath = await createBackupZip(projects, onProgress);
 
   const canShare = await Sharing.isAvailableAsync();
   if (canShare) {

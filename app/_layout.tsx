@@ -5,7 +5,10 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
+import { BackupProgressBar } from '@/components/backup-progress-bar';
 import { LoadingScreen } from '@/components/loading-screen';
+import { BackupProgressProvider } from '@/contexts/BackupProgressContext';
+import { useAutoBackup } from '@/hooks/useAutoBackup';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // Set to true to keep loading screen visible in emulator for design review
@@ -33,16 +36,28 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <View style={styles.rtlWrapper}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="backup" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="reset-to-root" options={{ headerShown: false }} />
-        </Stack>
-      </View>
+      <BackupProgressProvider>
+        <AppContent />
+      </BackupProgressProvider>
       <StatusBar style="dark" />
     </ThemeProvider>
+  );
+}
+
+/** Inner component so useAutoBackup can access BackupProgressProvider */
+function AppContent() {
+  useAutoBackup();
+
+  return (
+    <View style={styles.rtlWrapper}>
+      <BackupProgressBar />
+      <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="backup" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="reset-to-root" options={{ headerShown: false }} />
+      </Stack>
+    </View>
   );
 }
 

@@ -1,8 +1,11 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,11 +15,27 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ACCENT } from '@/constants/controls';
+import {
+  DRIVE_SCOPE,
+  GOOGLE_ANDROID_CLIENT_ID,
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_WEB_CLIENT_ID,
+} from '@/constants/google';
 import { Colors, Fonts } from '@/constants/theme';
+import { useBackupProgress } from '@/contexts/BackupProgressContext';
 import { exportBackupZip, importBackupFile } from '@/utils/backupManager';
+import {
+  clearTokens,
+  exchangeCodeForTokens,
+  getUserEmail,
+  isSignedIn as checkSignedIn,
+} from '@/utils/googleAuth';
+import { clearFolderCache } from '@/utils/googleDriveApi';
+import { getLastBackupDate, runAutoBackup } from '@/utils/autoBackup';
 import { loadProjects, saveProjects } from '@/utils/projectStorage';
 
 import ArrowTriangleIcon from '@/assets/icons/arrow_triangle.svg';
+import CheckmarkIcon from '@/assets/icons/checkmark.svg';
 import DownloadIcon from '@/assets/icons/download.svg';
 import LeftIcon from '@/assets/icons/left.svg';
 
@@ -24,8 +43,86 @@ export default function BackupScreen() {
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState('');
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [signedIn, setSignedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [lastBackup, setLastBackup] = useState<Date | null>(null);
   const colorScheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
+  const backupProgress = useBackupProgress();
+
+  // Google OAuth setup
+  const redirectUri = AuthSession.makeRedirectUri();
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    scopes: [DRIVE_SCOPE, 'openid', 'email'],
+    extraParams: {
+      access_type: 'offline',
+      prompt: 'consent',
+    },
+    responseType: 'code',
+    redirectUri,
+  });
+
+  // Load sign-in state
+  const refreshState = useCallback(async () => {
+    const [signed, email, backup] = await Promise.all([
+      checkSignedIn(),
+      getUserEmail(),
+      getLastBackupDate(),
+    ]);
+    setSignedIn(signed);
+    setUserEmail(email);
+    setLastBackup(backup);
+  }, []);
+
+  useEffect(() => {
+    refreshState();
+  }, [refreshState]);
+
+  // Handle OAuth response
+  useEffect(() => {
+    if (response?.type === 'success' && response.params?.code) {
+      (async () => {
+        try {
+          setBusy(true);
+          setBusyLabel('מתחבר...');
+          await exchangeCodeForTokens(response.params.code, redirectUri);
+          await refreshState();
+          Alert.alert('התחברת בהצלחה', 'הגיבויים יעלו אוטומטית לגוגל דרייב');
+        } catch (e: any) {
+          Alert.alert('שגיאה', e?.message ?? 'לא ניתן להתחבר');
+        } finally {
+          setBusy(false);
+        }
+      })();
+    }
+  }, [response]);
+
+  const handleSignIn = () => {
+    promptAsync();
+  };
+
+  const handleSignOut = () => {
+    Alert.alert('ניתוק גוגל דרייב', 'הגיבויים האוטומטיים יפסקו. להמשיך?', [
+      { text: 'ביטול', style: 'cancel' },
+      {
+        text: 'נתק',
+        style: 'destructive',
+        onPress: async () => {
+          await clearTokens();
+          clearFolderCache();
+          setSignedIn(false);
+          setUserEmail(null);
+        },
+      },
+    ]);
+  };
+
+  const handleDriveBackupNow = () => {
+    runAutoBackup(backupProgress).then(() => refreshState());
+  };
 
   const handleExportZip = async () => {
     setBusy(true);
@@ -94,6 +191,9 @@ export default function BackupScreen() {
     }
   };
 
+  const formatDate = (date: Date) =>
+    `${date.toLocaleDateString('he-IL')} ${date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`;
+
   return (
     <View
       style={[
@@ -136,67 +236,174 @@ export default function BackupScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <View style={styles.content}>
-        {/* Export button */}
-        <TouchableOpacity
-          style={[styles.actionCard, { backgroundColor: ACCENT }]}
-          onPress={handleExportZip}
-          activeOpacity={0.85}
-          disabled={busy}>
-          <DownloadIcon width={22} height={22} fill="#fff" />
-          <View style={styles.actionTextWrap}>
-            <Text style={styles.actionTitle}>ייצוא גיבוי</Text>
-            <Text style={styles.actionSubtitle}>
-              שמור קובץ ZIP בגוגל דרייב, אימייל או מקום בטוח אחר
-            </Text>
-          </View>
-        </TouchableOpacity>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}>
+        {/* Google Drive section */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+            ]}>
+            גיבוי אוטומטי - גוגל דרייב
+          </Text>
 
-        {/* Import button */}
-        <TouchableOpacity
-          style={[
-            styles.actionCard,
-            {
-              backgroundColor:
-                colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
-              borderWidth: 1,
-              borderColor:
-                colorScheme === 'dark'
-                  ? 'rgba(255,255,255,0.08)'
-                  : 'rgba(0,0,0,0.08)',
-            },
-          ]}
-          onPress={handleImport}
-          activeOpacity={0.85}
-          disabled={busy}>
-          <ArrowTriangleIcon width={22} height={22} fill={ACCENT} />
-          <View style={styles.actionTextWrap}>
-            <Text
+          {signedIn ? (
+            // Connected state
+            <View
               style={[
-                styles.actionTitle,
-                { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+                styles.driveCard,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                  borderColor:
+                    colorScheme === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(0,0,0,0.08)',
+                },
               ]}>
-              ייבוא גיבוי
-            </Text>
-            <Text
-              style={[
-                styles.actionSubtitle,
-                { color: Colors[colorScheme].icon },
-              ]}>
-              שחזר פרויקטים מקובץ ZIP או JSON
-            </Text>
-          </View>
-        </TouchableOpacity>
+              <View style={styles.driveConnected}>
+                <View
+                  style={[
+                    styles.driveStatusDot,
+                    { backgroundColor: '#2E7D32' },
+                  ]}
+                />
+                <View style={styles.driveTextWrap}>
+                  <Text
+                    style={[
+                      styles.driveEmail,
+                      {
+                        color:
+                          colorScheme === 'dark' ? '#fff' : '#11181C',
+                      },
+                    ]}
+                    numberOfLines={1}>
+                    {userEmail ?? 'מחובר'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.driveLastBackup,
+                      { color: Colors[colorScheme].icon },
+                    ]}>
+                    {lastBackup
+                      ? `גיבוי אחרון: ${formatDate(lastBackup)}`
+                      : 'טרם בוצע גיבוי'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.driveActions}>
+                <TouchableOpacity
+                  style={[styles.driveButton, { backgroundColor: ACCENT }]}
+                  onPress={handleDriveBackupNow}
+                  activeOpacity={0.85}>
+                  <Text style={styles.driveButtonText}>גבה עכשיו</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleSignOut}
+                  activeOpacity={0.7}>
+                  <Text
+                    style={[
+                      styles.disconnectText,
+                      { color: Colors[colorScheme].icon },
+                    ]}>
+                    נתק
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            // Not connected
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: '#4285F4' }]}
+              onPress={handleSignIn}
+              activeOpacity={0.85}
+              disabled={busy || !request}>
+              <CheckmarkIcon width={22} height={22} fill="#fff" />
+              <View style={styles.actionTextWrap}>
+                <Text style={styles.actionTitle}>חבר את גוגל דרייב</Text>
+                <Text style={styles.actionSubtitle}>
+                  גיבוי אוטומטי כל 30 יום
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Manual backup section */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+            ]}>
+            גיבוי ידני
+          </Text>
+
+          {/* Export */}
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: ACCENT }]}
+            onPress={handleExportZip}
+            activeOpacity={0.85}
+            disabled={busy}>
+            <DownloadIcon width={22} height={22} fill="#fff" />
+            <View style={styles.actionTextWrap}>
+              <Text style={styles.actionTitle}>ייצוא גיבוי</Text>
+              <Text style={styles.actionSubtitle}>
+                שמור קובץ ZIP בגוגל דרייב, אימייל או מקום בטוח אחר
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Import */}
+          <TouchableOpacity
+            style={[
+              styles.actionCard,
+              {
+                backgroundColor:
+                  colorScheme === 'dark' ? '#11181C' : '#FFFFFF',
+                borderWidth: 1,
+                borderColor:
+                  colorScheme === 'dark'
+                    ? 'rgba(255,255,255,0.08)'
+                    : 'rgba(0,0,0,0.08)',
+              },
+            ]}
+            onPress={handleImport}
+            activeOpacity={0.85}
+            disabled={busy}>
+            <ArrowTriangleIcon width={22} height={22} fill={ACCENT} />
+            <View style={styles.actionTextWrap}>
+              <Text
+                style={[
+                  styles.actionTitle,
+                  { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+                ]}>
+                ייבוא גיבוי
+              </Text>
+              <Text
+                style={[
+                  styles.actionSubtitle,
+                  { color: Colors[colorScheme].icon },
+                ]}>
+                שחזר פרויקטים מקובץ ZIP או JSON
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* Info */}
         <View style={styles.infoSection}>
           <Text
             style={[styles.infoText, { color: Colors[colorScheme].icon }]}>
-            ייצא גיבוי באופן קבוע ושמור אותו בגוגל דרייב, אימייל או מקום
-            בטוח אחר כדי להגן על הנתונים שלך.
+            כשגוגל דרייב מחובר, האפליקציה תגבה אוטומטית כל 30 יום בפתיחת
+            האפליקציה. נשמרים עד 5 גיבויים אחרונים.
           </Text>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Busy overlay */}
       {busy && (
@@ -252,10 +459,80 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: Fonts?.rounded,
   },
-  content: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 24,
+  },
+
+  section: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+
+  // Google Drive connected card
+  driveCard: {
+    borderRadius: 18,
+    borderWidth: 1,
     padding: 16,
     gap: 14,
   },
+  driveConnected: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  driveStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  driveTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  driveEmail: {
+    fontSize: 15,
+    fontWeight: '600',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  driveLastBackup: {
+    fontSize: 13,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  driveActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  driveButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  driveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+  },
+  disconnectText: {
+    fontSize: 14,
+    writingDirection: 'rtl',
+    textDecorationLine: 'underline',
+  },
+
+  // Action cards
   actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,9 +555,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     writingDirection: 'rtl',
   },
+
   infoSection: {
     paddingHorizontal: 4,
-    marginTop: 8,
   },
   infoText: {
     fontSize: 13,
@@ -288,6 +565,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'right',
   },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
