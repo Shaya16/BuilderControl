@@ -62,6 +62,60 @@ export function textToBytes(str: string): Uint8Array {
   return new Uint8Array(arr);
 }
 
+/** Read a 16-bit little-endian value from a buffer at offset. */
+function readU16(buf: Uint8Array, offset: number): number {
+  return buf[offset] | (buf[offset + 1] << 8);
+}
+
+/** Read a 32-bit little-endian unsigned value from a buffer at offset. */
+function readU32(buf: Uint8Array, offset: number): number {
+  return (
+    (buf[offset] |
+      (buf[offset + 1] << 8) |
+      (buf[offset + 2] << 16) |
+      (buf[offset + 3] << 24)) >>>
+    0
+  );
+}
+
+/** Decode a UTF-8 Uint8Array to a string (TextDecoder not available in Hermes). */
+export function bytesToText(bytes: Uint8Array): string {
+  const chars: string[] = [];
+  let i = 0;
+  while (i < bytes.length) {
+    const b = bytes[i];
+    if (b < 0x80) {
+      chars.push(String.fromCharCode(b));
+      i++;
+    } else if ((b & 0xe0) === 0xc0) {
+      const cp = ((b & 0x1f) << 6) | (bytes[i + 1] & 0x3f);
+      chars.push(String.fromCharCode(cp));
+      i += 2;
+    } else if ((b & 0xf0) === 0xe0) {
+      const cp =
+        ((b & 0x0f) << 12) |
+        ((bytes[i + 1] & 0x3f) << 6) |
+        (bytes[i + 2] & 0x3f);
+      chars.push(String.fromCharCode(cp));
+      i += 3;
+    } else {
+      // 4-byte sequence → surrogate pair
+      const cp =
+        ((b & 0x07) << 18) |
+        ((bytes[i + 1] & 0x3f) << 12) |
+        ((bytes[i + 2] & 0x3f) << 6) |
+        (bytes[i + 3] & 0x3f);
+      const adjusted = cp - 0x10000;
+      chars.push(
+        String.fromCharCode(0xd800 + (adjusted >> 10)),
+        String.fromCharCode(0xdc00 + (adjusted & 0x3ff)),
+      );
+      i += 4;
+    }
+  }
+  return chars.join('');
+}
+
 /** Write a 16-bit little-endian value into a buffer at offset. */
 function writeU16(buf: Uint8Array, offset: number, value: number) {
   buf[offset] = value & 0xff;
@@ -216,5 +270,201 @@ export class StreamingZipWriter {
 
     this.handle.writeBytes(eocd);
     this.handle.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ZIP Reader Entry
+// ---------------------------------------------------------------------------
+
+interface ZipReadEntry {
+  name: string;
+  compressedSize: number;
+  uncompressedSize: number;
+  compressionMethod: number; // 0 = STORE, 8 = DEFLATE
+  localHeaderOffset: number;
+}
+
+// ---------------------------------------------------------------------------
+// StreamingZipReader — reads ZIP files without loading the full archive
+// ---------------------------------------------------------------------------
+
+/**
+ * Streaming ZIP reader that uses FileHandle random access to read files
+ * one at a time. Only holds one file's data in memory at any point.
+ *
+ * Supports STORE (uncompressed) entries only. Use `isAllStore()` to check
+ * before reading; fall back to JSZip for DEFLATE entries.
+ */
+export class StreamingZipReader {
+  private handle: ReturnType<InstanceType<typeof FSFile>['open']>;
+  private fileSize: number;
+  private entries = new Map<string, ZipReadEntry>();
+
+  constructor(zipPath: string) {
+    const file = new FSFile(zipPath);
+    this.handle = file.open();
+    this.fileSize = this.handle.size ?? 0;
+
+    if (this.fileSize < 22) {
+      this.handle.close();
+      throw new Error('קובץ ZIP לא תקין: קובץ קטן מדי');
+    }
+
+    this.parseEOCD();
+  }
+
+  // --- Public API ---
+
+  /** Check if a file exists in the archive. */
+  hasFile(name: string): boolean {
+    return this.entries.has(name);
+  }
+
+  /** List all file paths in the archive. */
+  listFiles(): string[] {
+    return Array.from(this.entries.keys());
+  }
+
+  /** True if every entry uses STORE compression (no DEFLATE). */
+  isAllStore(): boolean {
+    for (const entry of this.entries.values()) {
+      if (entry.compressionMethod !== 0) return false;
+    }
+    return true;
+  }
+
+  /** Number of entries in the archive. */
+  get entryCount(): number {
+    return this.entries.size;
+  }
+
+  /**
+   * Read a single file's raw bytes. Only supports STORE entries.
+   * Throws if the file is not found or uses DEFLATE compression.
+   */
+  readFile(name: string): Uint8Array {
+    const entry = this.entries.get(name);
+    if (!entry) {
+      throw new Error(`קובץ לא נמצא בארכיון: ${name}`);
+    }
+    if (entry.compressionMethod !== 0) {
+      throw new Error(`קובץ דחוס בפורמט לא נתמך: ${name}`);
+    }
+
+    // Seek to local file header
+    this.handle.offset = entry.localHeaderOffset;
+    const localHeader = this.handle.readBytes(30);
+
+    // Validate signature
+    if (readU32(localHeader, 0) !== 0x04034b50) {
+      throw new Error(`כותרת קובץ ZIP לא תקינה: ${name}`);
+    }
+
+    // Get actual filename + extra field lengths from local header
+    // (may differ from central directory)
+    const localNameLen = readU16(localHeader, 26);
+    const localExtraLen = readU16(localHeader, 28);
+
+    // Skip past filename + extra field to reach file data
+    const dataOffset =
+      entry.localHeaderOffset + 30 + localNameLen + localExtraLen;
+    this.handle.offset = dataOffset;
+
+    // Read file data
+    if (entry.uncompressedSize === 0) {
+      return new Uint8Array(0);
+    }
+    return this.handle.readBytes(entry.uncompressedSize);
+  }
+
+  /** Read a file as a UTF-8 string. */
+  readFileAsText(name: string): string {
+    return bytesToText(this.readFile(name));
+  }
+
+  /** Close the file handle. */
+  close(): void {
+    try {
+      this.handle.close();
+    } catch {
+      // Already closed — ignore
+    }
+  }
+
+  // --- Private parsing ---
+
+  private parseEOCD(): void {
+    // Read last 256 bytes (or whole file if smaller) to find EOCD signature
+    const searchSize = Math.min(256, this.fileSize);
+    this.handle.offset = this.fileSize - searchSize;
+    const tail = this.handle.readBytes(searchSize);
+
+    // Scan backwards for EOCD signature 0x06054b50
+    let eocdOffset = -1;
+    for (let i = tail.length - 22; i >= 0; i--) {
+      if (
+        tail[i] === 0x50 &&
+        tail[i + 1] === 0x4b &&
+        tail[i + 2] === 0x05 &&
+        tail[i + 3] === 0x06
+      ) {
+        eocdOffset = i;
+        break;
+      }
+    }
+
+    if (eocdOffset === -1) {
+      throw new Error('קובץ ZIP לא תקין: לא נמצא EOCD');
+    }
+
+    const numEntries = readU16(tail, eocdOffset + 8);
+    const centralDirSize = readU32(tail, eocdOffset + 12);
+    const centralDirOffset = readU32(tail, eocdOffset + 16);
+
+    this.parseCentralDirectory(centralDirOffset, centralDirSize, numEntries);
+  }
+
+  private parseCentralDirectory(
+    offset: number,
+    _size: number,
+    numEntries: number,
+  ): void {
+    this.handle.offset = offset;
+
+    for (let i = 0; i < numEntries; i++) {
+      const header = this.handle.readBytes(46);
+
+      // Validate signature
+      if (readU32(header, 0) !== 0x02014b50) {
+        throw new Error('קובץ ZIP לא תקין: כותרת central directory שגויה');
+      }
+
+      const compressionMethod = readU16(header, 10);
+      const compressedSize = readU32(header, 20);
+      const uncompressedSize = readU32(header, 24);
+      const nameLen = readU16(header, 28);
+      const extraLen = readU16(header, 30);
+      const commentLen = readU16(header, 32);
+      const localHeaderOffset = readU32(header, 42);
+
+      // Read filename
+      const nameBytes = this.handle.readBytes(nameLen);
+      const name = bytesToText(nameBytes);
+
+      // Skip extra field + comment
+      if (extraLen + commentLen > 0) {
+        this.handle.offset =
+          (this.handle.offset ?? 0) + extraLen + commentLen;
+      }
+
+      this.entries.set(name, {
+        name,
+        compressedSize,
+        uncompressedSize,
+        compressionMethod,
+        localHeaderOffset,
+      });
+    }
   }
 }

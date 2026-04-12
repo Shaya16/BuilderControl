@@ -5,7 +5,7 @@ import * as Sharing from 'expo-sharing';
 import JSZip from 'jszip';
 
 import { Control, ControlImage, Program, Project } from '@/types/project';
-import { StreamingZipWriter, textToBytes } from './streamingZip';
+import { StreamingZipWriter, StreamingZipReader, textToBytes } from './streamingZip';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -235,7 +235,94 @@ async function importFromZip(
   zipUri: string,
   onProgress?: (current: number, total: number) => void,
 ): Promise<Project[]> {
-  // Read ZIP as raw bytes via JSI (no string size limits)
+  // Try streaming reader first (no full-file memory load)
+  let reader: StreamingZipReader | null = null;
+  try {
+    reader = new StreamingZipReader(zipUri);
+
+    // If ZIP contains DEFLATE entries (older backups), fall back to JSZip
+    if (!reader.isAllStore()) {
+      reader.close();
+      reader = null;
+      return importFromZipLegacy(zipUri, onProgress);
+    }
+
+    // Read projects.json
+    if (!reader.hasFile(PROJECTS_FILE)) {
+      throw new Error('קובץ גיבוי לא תקין: חסר projects.json');
+    }
+    const projectsJson = reader.readFileAsText(PROJECTS_FILE);
+    const projects: Project[] = JSON.parse(projectsJson);
+
+    // Validate
+    if (!Array.isArray(projects)) {
+      throw new Error('פורמט גיבוי לא תקין: נדרש מערך של פרויקטים');
+    }
+    for (const item of projects) {
+      if (!item.id || !item.name) {
+        throw new Error(
+          'פורמט פרויקט לא תקין: כל פרויקט חייב לכלול id ו-name',
+        );
+      }
+    }
+
+    // Extract images one at a time (only one image in memory at a time)
+    const docDir = FileSystem.documentDirectory ?? '';
+    const imageFiles = reader
+      .listFiles()
+      .filter((p) => p.startsWith('images/') && !p.endsWith('/'));
+    const total = imageFiles.length;
+
+    for (let i = 0; i < imageFiles.length; i++) {
+      const relativePath = imageFiles[i];
+      onProgress?.(i + 1, total);
+
+      try {
+        const stripped = relativePath.replace(/^images\//, '');
+        const destPath = `${docDir}${stripped}`;
+
+        // Ensure parent directory exists
+        const parentDir = destPath.substring(0, destPath.lastIndexOf('/'));
+        await FileSystem.makeDirectoryAsync(parentDir, {
+          intermediates: true,
+        });
+
+        // Read ONE image, write to disk, then GC-eligible
+        const imgBytes = reader.readFile(relativePath);
+        const imgFile = new FSFile(destPath);
+        imgFile.create({ overwrite: true });
+        const imgHandle = imgFile.open();
+        imgHandle.writeBytes(imgBytes);
+        imgHandle.close();
+      } catch {
+        // Skip individual file failures
+      }
+    }
+
+    reader.close();
+
+    // Rewrite relative paths to absolute
+    return projects.map((p) => rewriteProjectUris(p, toAbsolutePath));
+  } catch (error) {
+    reader?.close();
+
+    // If streaming reader failed (corrupt ZIP, unsupported format, etc.),
+    // try JSZip as fallback
+    if (reader !== null) {
+      throw error; // Reader opened fine but import logic failed — don't retry
+    }
+    return importFromZipLegacy(zipUri, onProgress);
+  }
+}
+
+/**
+ * Legacy JSZip-based import. Used as fallback for DEFLATE-compressed ZIPs
+ * or when the streaming reader fails. Loads entire ZIP into memory.
+ */
+async function importFromZipLegacy(
+  zipUri: string,
+  onProgress?: (current: number, total: number) => void,
+): Promise<Project[]> {
   const zipBytes = new FSFile(zipUri).bytesSync();
   const zip = await JSZip.loadAsync(zipBytes);
 
@@ -254,7 +341,9 @@ async function importFromZip(
   }
   for (const item of projects) {
     if (!item.id || !item.name) {
-      throw new Error('פורמט פרויקט לא תקין: כל פרויקט חייב לכלול id ו-name');
+      throw new Error(
+        'פורמט פרויקט לא תקין: כל פרויקט חייב לכלול id ו-name',
+      );
     }
   }
 
@@ -270,16 +359,15 @@ async function importFromZip(
     onProgress?.(i + 1, total);
 
     try {
-      // Strip "images/" prefix to get path under documentDirectory
       const stripped = relativePath.replace(/^images\//, '');
       const destPath = `${docDir}${stripped}`;
 
-      // Ensure parent directory exists
       const parentDir = destPath.substring(0, destPath.lastIndexOf('/'));
       await FileSystem.makeDirectoryAsync(parentDir, { intermediates: true });
 
       const imgBytes = await zip.files[relativePath].async('uint8array');
       const imgFile = new FSFile(destPath);
+      imgFile.create({ overwrite: true });
       const imgHandle = imgFile.open();
       imgHandle.writeBytes(imgBytes);
       imgHandle.close();
@@ -288,12 +376,7 @@ async function importFromZip(
     }
   }
 
-  // Rewrite relative paths to absolute
-  const restored = projects.map((p) =>
-    rewriteProjectUris(p, toAbsolutePath),
-  );
-
-  return restored;
+  return projects.map((p) => rewriteProjectUris(p, toAbsolutePath));
 }
 
 // ---------------------------------------------------------------------------
