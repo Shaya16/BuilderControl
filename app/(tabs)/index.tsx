@@ -181,11 +181,11 @@ export default function ControlsScreen() {
   };
 
   const handleSelectAll = () => {
-    const allIds = (project?.controls ?? []).map((c) => c.id);
-    if (selectedIds.size === allIds.length) {
+    const filteredIds = controls.map((c) => c.id);
+    if (filteredIds.every((id) => selectedIds.has(id))) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(allIds));
+      setSelectedIds(new Set(filteredIds));
     }
   };
 
@@ -479,12 +479,12 @@ export default function ControlsScreen() {
                 <XmarkIcon width={16} height={16} fill="#666" />
               </TouchableOpacity>
               <Text style={styles.selectionCount}>
-                {selectedIds.size} / {allControls.length} נבחרו
+                {selectedIds.size} / {controls.length} נבחרו
               </Text>
             </View>
             <TouchableOpacity onPress={handleSelectAll} activeOpacity={0.7}>
               <Text style={styles.selectAllText}>
-                {selectedIds.size === allControls.length ? 'בטל הכל' : 'בחר הכל'}
+                {controls.every((c) => selectedIds.has(c.id)) ? 'בטל הכל' : 'בחר הכל'}
               </Text>
             </TouchableOpacity>
           </View>
