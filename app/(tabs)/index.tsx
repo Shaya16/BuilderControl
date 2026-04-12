@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -49,6 +51,8 @@ export default function ControlsScreen() {
   const [batchExporting, setBatchExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
   const [exportStatus, setExportStatus] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [monthPickerVisible, setMonthPickerVisible] = useState(false);
   const colorScheme = useColorScheme() ?? 'light';
 
   const loadProject = useCallback(() => {
@@ -284,13 +288,41 @@ export default function ControlsScreen() {
     }
   };
 
+  const HEBREW_MONTHS = [
+    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+  ];
+
   const allControls = project?.controls ?? [];
+
+  // Derive available months from controls (newest first)
+  const availableMonths = (() => {
+    const monthSet = new Set<string>();
+    for (const c of allControls) {
+      const dateStr = c.updatedAt ?? c.createdAt;
+      if (dateStr) monthSet.add(dateStr.slice(0, 7)); // "2025-01"
+    }
+    return Array.from(monthSet)
+      .sort((a, b) => b.localeCompare(a)) // newest first
+      .map((value) => {
+        const [year, month] = value.split('-');
+        const monthName = HEBREW_MONTHS[parseInt(month, 10) - 1];
+        return { label: `${monthName} ${year}`, value };
+      });
+  })();
+
   const controls = allControls
-    .filter(
-      (control) =>
+    .filter((control) => {
+      // Text search
+      const matchesSearch =
         !searchQuery.trim() ||
-        control.elementName.toLowerCase().includes(searchQuery.trim().toLowerCase())
-    )
+        control.elementName.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      // Month filter
+      const matchesMonth =
+        !selectedMonth ||
+        (control.updatedAt ?? control.createdAt ?? '').startsWith(selectedMonth);
+      return matchesSearch && matchesMonth;
+    })
     .sort((a, b) => {
       const dateA = a.updatedAt ?? a.createdAt ?? '';
       const dateB = b.updatedAt ?? b.createdAt ?? '';
@@ -334,8 +366,101 @@ export default function ControlsScreen() {
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* Month filter button */}
+            {availableMonths.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.monthFilterButton,
+                  selectedMonth != null && styles.monthFilterButtonActive,
+                ]}
+                onPress={() => setMonthPickerVisible(true)}
+                activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.monthFilterButtonText,
+                    selectedMonth != null && styles.monthFilterButtonTextActive,
+                  ]}>
+                  {selectedMonth
+                    ? availableMonths.find((m) => m.value === selectedMonth)?.label
+                    : 'סנן לפי חודש'}
+                </Text>
+                {selectedMonth != null && (
+                  <TouchableOpacity
+                    onPress={() => setSelectedMonth(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <XmarkIcon width={14} height={14} fill={ACCENT} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         )}
+
+        {/* Month picker modal */}
+        <Modal
+          visible={monthPickerVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMonthPickerVisible(false)}>
+          <TouchableOpacity
+            style={styles.monthModalOverlay}
+            activeOpacity={1}
+            onPress={() => setMonthPickerVisible(false)}>
+            <View
+              style={[
+                styles.monthModalBox,
+                {
+                  backgroundColor:
+                    colorScheme === 'dark' ? '#1C2830' : '#fff',
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.monthModalTitle,
+                  { color: colorScheme === 'dark' ? '#fff' : '#11181C' },
+                ]}>
+                סנן לפי חודש
+              </Text>
+              <ScrollView style={styles.monthModalList}>
+                {availableMonths.map((month) => (
+                  <TouchableOpacity
+                    key={month.value}
+                    style={[
+                      styles.monthModalItem,
+                      selectedMonth === month.value &&
+                        styles.monthModalItemActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedMonth(
+                        selectedMonth === month.value ? null : month.value,
+                      );
+                      setMonthPickerVisible(false);
+                    }}
+                    activeOpacity={0.7}>
+                    <Text
+                      style={[
+                        styles.monthModalItemText,
+                        {
+                          color:
+                            selectedMonth === month.value
+                              ? ACCENT
+                              : colorScheme === 'dark'
+                                ? '#fff'
+                                : '#11181C',
+                        },
+                      ]}>
+                      {month.label}
+                    </Text>
+                    {selectedMonth === month.value && (
+                      <CheckmarkIcon width={16} height={16} fill={ACCENT} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {allControls.length > 0 && !selectionMode && (
           <TouchableOpacity
@@ -490,6 +615,76 @@ const styles = StyleSheet.create({
   searchClearButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  monthFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignSelf: 'flex-end',
+    marginTop: 8,
+  },
+  monthFilterButtonActive: {
+    borderColor: ACCENT,
+    backgroundColor: 'rgba(255, 106, 6, 0.08)',
+  },
+  monthFilterButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#687076',
+    writingDirection: 'rtl',
+  },
+  monthFilterButtonTextActive: {
+    color: ACCENT,
+    fontWeight: '600',
+  },
+  monthModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monthModalBox: {
+    width: 280,
+    maxHeight: 400,
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  monthModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  monthModalList: {
+    maxHeight: 300,
+  },
+  monthModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  monthModalItemActive: {
+    backgroundColor: 'rgba(255, 106, 6, 0.08)',
+  },
+  monthModalItemText: {
+    fontSize: 15,
+    fontWeight: '500',
+    writingDirection: 'rtl',
   },
   emptyContainer: {
     alignItems: 'center',
